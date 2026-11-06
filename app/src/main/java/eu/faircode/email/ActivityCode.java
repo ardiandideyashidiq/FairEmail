@@ -36,6 +36,9 @@ import android.view.View;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.view.Gravity;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
@@ -70,7 +73,6 @@ import java.util.Map;
 public class ActivityCode extends ActivityBase {
     private WebView wvCode;
     private ContentLoadingProgressBar pbWait;
-    private Group grpReady;
 
     private boolean force_light = false;
     private boolean sanitize = false;
@@ -101,14 +103,22 @@ public class ActivityCode extends ActivityBase {
             }
         });
 
-        View view = LayoutInflater.from(this).inflate(R.layout.activity_code, null);
-        setContentView(view);
+        FrameLayout layout = new FrameLayout(this);
+        wvCode = new WebView(this);
+        layout.addView(wvCode, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+
+        pbWait = new ContentLoadingProgressBar(this);
+        FrameLayout.LayoutParams lpPb = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lpPb.gravity = Gravity.CENTER;
+        layout.addView(pbWait, lpPb);
+
+        setContentView(layout);
 
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-
-        wvCode = findViewById(R.id.wvCode);
-        pbWait = findViewById(R.id.pbWait);
-        grpReady = findViewById(R.id.grpReady);
 
         wvCode.clearCache(true);
 
@@ -152,7 +162,7 @@ public class ActivityCode extends ActivityBase {
         });
 
         // Initialize
-        grpReady.setVisibility(View.GONE);
+        wvCode.setVisibility(View.GONE);
 
         load();
     }
@@ -414,7 +424,7 @@ public class ActivityCode extends ActivityBase {
                         "</html>";
 
                 wvCode.loadDataWithBaseURL("file:///android_asset/", html, "text/html", StandardCharsets.UTF_8.name(), null);
-                grpReady.setVisibility(View.VISIBLE);
+                wvCode.setVisibility(View.VISIBLE);
             }
 
             @Override
