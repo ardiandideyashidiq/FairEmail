@@ -342,7 +342,7 @@ fun DialogAddImageContent(
     }
 }
 
-class DialogAddImageView(
+class DialogAddImageView @JvmOverloads constructor(
     context: Context,
     @StringRes titleRes: Int,
     @DrawableRes typeIconRes: Int,

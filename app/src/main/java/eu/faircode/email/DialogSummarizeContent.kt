@@ -191,7 +191,7 @@ class DialogSummarizeView(
         setViewCompositionStrategy(
             ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool
         )
-        val density = context.resources.displayMetrics.scaledDensity
+        val density = context.resources.displayMetrics.density
         val textSizeSp = if (summaryTextSizePx > 0 && density > 0) {
             (summaryTextSizePx / density).sp
         } else {
