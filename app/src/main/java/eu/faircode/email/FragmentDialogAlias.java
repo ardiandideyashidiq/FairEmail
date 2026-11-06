@@ -25,14 +25,7 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
-import android.view.KeyEvent;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
-import android.widget.EditText;
-import android.widget.ImageButton;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -43,45 +36,40 @@ public class FragmentDialogAlias extends FragmentDialogBase {
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         final Context context = getContext();
-        View view = LayoutInflater.from(context).inflate(R.layout.dialog_alias, null);
-        final EditText etName = view.findViewById(R.id.etName);
-        final EditText etEmail = view.findViewById(R.id.etEmail);
-        final ImageButton ibInfo = view.findViewById(R.id.ibInfo);
-
         Bundle args = getArguments();
-        etName.setText(args.getString("name"));
-        etEmail.setText(args.getString("email"));
+        String initialName = (args != null ? args.getString("name") : null);
+        String initialEmail = (args != null ? args.getString("email") : null);
 
-        etEmail.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId != EditorInfo.IME_ACTION_DONE)
-                    return false;
-                AlertDialog dialog = (AlertDialog) getDialog();
-                if (dialog == null)
-                    return false;
-                Button btnOk = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-                if (btnOk == null)
-                    return false;
-                btnOk.performClick();
-                return true;
-            }
-        });
-
-        ibInfo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Helper.viewFAQ(v.getContext(), 9);
-            }
-        });
+        final DialogAliasView aliasView = new DialogAliasView(
+                context,
+                initialName,
+                initialEmail,
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        Helper.viewFAQ(context, 9);
+                    }
+                },
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        AlertDialog dialog = (AlertDialog) getDialog();
+                        if (dialog != null) {
+                            Button btnOk = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+                            if (btnOk != null)
+                                btnOk.performClick();
+                        }
+                    }
+                }
+        );
 
         return new AlertDialog.Builder(context)
-                .setView(view)
+                .setView(aliasView.getComposeView())
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        args.putString("name", etName.getText().toString());
-                        args.putString("email", etEmail.getText().toString());
+                        args.putString("name", aliasView.getName());
+                        args.putString("email", aliasView.getEmail());
 
                         new SimpleTask<EntityIdentity>() {
                             @Override
