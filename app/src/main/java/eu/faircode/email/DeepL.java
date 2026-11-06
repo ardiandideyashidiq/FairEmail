@@ -30,19 +30,11 @@ import android.os.Bundle;
 import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
 import android.text.style.RelativeSizeSpan;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
-import android.widget.ImageButton;
-import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.preference.PreferenceManager;
 
-import com.google.android.material.textfield.TextInputLayout;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -393,68 +385,46 @@ public class DeepL {
             boolean html = prefs.getBoolean("deepl_html", false);
             int subscription = prefs.getInt("deepl_subscription", BuildConfig.DEBUG ? 17 : 0);
 
-            View view = LayoutInflater.from(context).inflate(R.layout.dialog_deepl, null);
-            final ImageButton ibInfo = view.findViewById(R.id.ibInfo);
-            final TextInputLayout tilKey = view.findViewById(R.id.tilKey);
-            final CheckBox cbFormal = view.findViewById(R.id.cbFormal);
-            final TextView tvFormal = view.findViewById(R.id.tvFormal);
-            final CheckBox cbSmall = view.findViewById(R.id.cbSmall);
-            final CheckBox cbReplace = view.findViewById(R.id.cbReplace);
-            final CheckBox cbHighlight = view.findViewById(R.id.cbHighlight);
-            final CheckBox cbHtml = view.findViewById(R.id.cbHtml);
-            final TextView tvUsage = view.findViewById(R.id.tvUsage);
-            final TextView tvPrivacy = view.findViewById(R.id.tvPrivacy);
-
-            ibInfo.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Helper.viewFAQ(v.getContext(), 167);
-                }
-            });
-
-            cbSmall.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    cbReplace.setEnabled(!isChecked);
-                }
-            });
-
-            tvUsage.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    Helper.view(view.getContext(), Uri.parse(PLAN_URI), true);
-                }
-            });
-
-            tvPrivacy.setPaintFlags(tvPrivacy.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
-            tvPrivacy.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Helper.view(v.getContext(), Uri.parse(PRIVACY_URI), false);
-                }
-            });
-
-            tilKey.getEditText().setText(key);
-            cbFormal.setChecked(formal);
-
+            String formalLanguages;
             try {
                 List<String> formals = new ArrayList<>();
                 for (Language lang : getTargetLanguages(context, false))
                     if (lang.formality)
                         formals.add(lang.name);
 
-                tvFormal.setText(TextUtils.join(", ", formals));
+                formalLanguages = TextUtils.join(", ", formals);
             } catch (Throwable ex) {
-                tvFormal.setText(Log.formatThrowable(ex, false));
+                formalLanguages = Log.formatThrowable(ex, false);
             }
 
-            cbSmall.setChecked(small);
-            cbReplace.setChecked(replace);
-            cbReplace.setEnabled(!small);
-            cbHighlight.setChecked(highlight);
-            cbHtml.setChecked(html);
-
-            tvUsage.setVisibility(View.GONE);
+            final DialogDeeplView dialogView = new DialogDeeplView(
+                    context,
+                    key,
+                    formal,
+                    formalLanguages,
+                    small,
+                    replace,
+                    highlight,
+                    html,
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            Helper.viewFAQ(context, 167);
+                        }
+                    },
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            Helper.view(context, Uri.parse(PLAN_URI), true);
+                        }
+                    },
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            Helper.view(context, Uri.parse(PRIVACY_URI), false);
+                        }
+                    }
+            );
 
             if (!TextUtils.isEmpty(key)) {
                 Bundle args = new Bundle();
@@ -489,34 +459,32 @@ public class DeepL {
                                 used += " +" + remaining;
                         }
 
-                        tvUsage.setText(used);
-                        tvUsage.setVisibility(View.VISIBLE);
+                        dialogView.setUsage(used);
                     }
 
                     @Override
                     protected void onException(Bundle args, Throwable ex) {
-                        tvUsage.setText(Log.formatThrowable(ex, false));
-                        tvUsage.setVisibility(View.VISIBLE);
+                        dialogView.setUsage(Log.formatThrowable(ex, false));
                     }
                 }.execute(this, new Bundle(), "deepl:usage");
             }
 
             return new AlertDialog.Builder(context)
-                    .setView(view)
+                    .setView(dialogView.getComposeView())
                     .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            String key = tilKey.getEditText().getText().toString().trim();
+                            String key = dialogView.getKey();
                             SharedPreferences.Editor editor = prefs.edit();
                             if (TextUtils.isEmpty(key))
                                 editor.remove("deepl_key");
                             else
                                 editor.putString("deepl_key", key);
-                            editor.putBoolean("deepl_formal", cbFormal.isChecked());
-                            editor.putBoolean("deepl_small", cbSmall.isChecked());
-                            editor.putBoolean("deepl_replace", cbReplace.isChecked());
-                            editor.putBoolean("deepl_highlight", cbHighlight.isChecked());
-                            editor.putBoolean("deepl_html", cbHtml.isChecked());
+                            editor.putBoolean("deepl_formal", dialogView.isFormal());
+                            editor.putBoolean("deepl_small", dialogView.isSmall());
+                            editor.putBoolean("deepl_replace", dialogView.isReplace());
+                            editor.putBoolean("deepl_highlight", dialogView.isHighlight());
+                            editor.putBoolean("deepl_html", dialogView.isHtml());
                             editor.apply();
                         }
                     })
