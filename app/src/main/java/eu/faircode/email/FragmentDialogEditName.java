@@ -43,38 +43,22 @@ public class FragmentDialogEditName extends FragmentDialogBase {
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         final Context context = getContext();
-        View view = LayoutInflater.from(context).inflate(R.layout.dialog_edit_name, null);
-        final EditText etName = view.findViewById(R.id.etName);
-        final CheckBox cbPrimary = view.findViewById(R.id.cbPrimary);
-
         Bundle args = getArguments();
-        etName.setText(args.getString("name"));
-        cbPrimary.setChecked(args.getBoolean("primary"));
-        cbPrimary.setVisibility(args.containsKey("primary") ? View.VISIBLE : View.GONE);
+        String name = (args != null ? args.getString("name") : "");
+        boolean primary = (args != null && args.getBoolean("primary"));
+        boolean showPrimary = (args != null && args.containsKey("primary"));
 
-        etName.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId != EditorInfo.IME_ACTION_DONE)
-                    return false;
-                AlertDialog dialog = (AlertDialog) getDialog();
-                if (dialog == null)
-                    return false;
-                Button btnOk = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-                if (btnOk == null)
-                    return false;
-                btnOk.performClick();
-                return true;
-            }
-        });
+        final DialogEditNameView editNameView = new DialogEditNameView(context, name, primary, showPrimary);
 
         return new AlertDialog.Builder(context)
-                .setView(view)
+                .setView(editNameView.getComposeView())
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        args.putString("name", etName.getText().toString());
-                        args.putBoolean("primary", cbPrimary.isChecked());
+                        if (args != null) {
+                            args.putString("name", editNameView.getName());
+                            args.putBoolean("primary", editNameView.isPrimary());
+                        }
                         sendResult(RESULT_OK);
                     }
                 })
