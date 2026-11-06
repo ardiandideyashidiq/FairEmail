@@ -20,30 +20,21 @@ package eu.faircode.email;
 */
 
 import android.app.Dialog;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.os.Build;
 import android.os.Bundle;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.style.RelativeSizeSpan;
-import android.util.TypedValue;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ImageButton;
-import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.widget.PopupMenu;
-import androidx.core.text.method.LinkMovementMethodCompat;
 import androidx.fragment.app.FragmentManager;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.preference.PreferenceManager;
@@ -58,15 +49,6 @@ public class FragmentDialogSummarize extends FragmentDialogBase {
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         final Context context = getContext();
-        final View view = LayoutInflater.from(context).inflate(R.layout.dialog_summarize, null);
-        final TextView tvCaption = view.findViewById(R.id.tvCaption);
-        final TextView tvFrom = view.findViewById(R.id.tvFrom);
-        final TextView tvSubject = view.findViewById(R.id.tvSubject);
-        final TextView tvSummary = view.findViewById(R.id.tvSummary);
-        final ImageButton ibCopy = view.findViewById(R.id.ibCopy);
-        final TextView tvElapsed = view.findViewById(R.id.tvElapsed);
-        final TextView tvError = view.findViewById(R.id.tvError);
-        final ContentLoadingProgressBar pbWait = view.findViewById(R.id.pbWait);
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         boolean compact = prefs.getBoolean("compact", false);
@@ -74,35 +56,26 @@ public class FragmentDialogSummarize extends FragmentDialogBase {
         int message_zoom = prefs.getInt("message_zoom", 100);
 
         float textSize = Helper.getTextSize(context, zoom) * message_zoom / 100f;
-        tvSummary.setTextSize(TypedValue.COMPLEX_UNIT_PX, textSize);
-        tvSummary.setMovementMethod(LinkMovementMethodCompat.getInstance());
-
-        ibCopy.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                final Context context = v.getContext();
-                ClipboardManager clipboard = Helper.getSystemService(context, ClipboardManager.class);
-                if (clipboard == null)
-                    return;
-
-                ClipData clip = ClipData.newPlainText(getString(R.string.app_name), tvSummary.getText());
-                clipboard.setPrimaryClip(clip);
-
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
-                    ToastEx.makeText(context, R.string.title_clipboard_copied, Toast.LENGTH_LONG).show();
-
-            }
-        });
 
         Bundle args = getArguments();
         long template = args.getLong("template");
         String prompt = args.getString("prompt");
+        String from = args.getString("from");
+        String subject = args.getString("subject");
 
-        if (prompt == null)
+        final DialogSummarizeView summarizeView = new DialogSummarizeView(
+                context,
+                prompt,
+                from,
+                subject,
+                textSize
+        );
+
+        if (prompt == null) {
             if (template <= 0)
-                tvCaption.setText(AI.getSummarizePrompt(context));
+                summarizeView.setCaption(AI.getSummarizePrompt(context));
             else {
-                tvCaption.setText(null);
+                summarizeView.setCaption(null);
                 new SimpleTask<String>() {
                     @Override
                     protected String onExecute(Context context, Bundle args) throws Throwable {
@@ -120,7 +93,7 @@ public class FragmentDialogSummarize extends FragmentDialogBase {
 
                     @Override
                     protected void onExecuted(Bundle args, String prompt) {
-                        tvCaption.setText(prompt);
+                        summarizeView.setCaption(prompt);
                     }
 
                     @Override
@@ -129,25 +102,12 @@ public class FragmentDialogSummarize extends FragmentDialogBase {
                     }
                 }.execute(this, args, "ai:prompt");
             }
-        else
-            tvCaption.setText(prompt);
-
-        tvFrom.setText(args.getString("from"));
-        tvSubject.setText(args.getString("subject"));
+        }
 
         new SimpleTask<Spanned>() {
             @Override
             protected void onPreExecute(Bundle args) {
-                tvSummary.setVisibility(View.GONE);
-                ibCopy.setVisibility(View.GONE);
-                tvElapsed.setVisibility(View.GONE);
-                tvError.setVisibility(View.GONE);
-                pbWait.setVisibility(View.VISIBLE);
-            }
-
-            @Override
-            protected void onPostExecute(Bundle args) {
-                pbWait.setVisibility(View.GONE);
+                summarizeView.setLoading(true);
             }
 
             @Override
@@ -169,22 +129,17 @@ public class FragmentDialogSummarize extends FragmentDialogBase {
 
             @Override
             protected void onExecuted(Bundle args, Spanned summary) {
-                tvSummary.setText(summary);
-                tvSummary.setVisibility(View.VISIBLE);
-                ibCopy.setVisibility(View.VISIBLE);
-                tvElapsed.setText(Helper.formatDuration(args.getLong("elapsed")));
-                tvElapsed.setVisibility(View.VISIBLE);
+                summarizeView.setSummary(summary, Helper.formatDuration(args.getLong("elapsed")));
             }
 
             @Override
             protected void onException(Bundle args, Throwable ex) {
-                tvError.setText(new ThrowableWrapper(ex).toSafeString());
-                tvError.setVisibility(View.VISIBLE);
+                summarizeView.setError(new ThrowableWrapper(ex).toSafeString());
             }
         }.execute(this, args, "message:summarize");
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context)
-                .setView(view)
+                .setView(summarizeView.getComposeView())
                 .setPositiveButton(android.R.string.cancel, null);
 
         return builder.create();
