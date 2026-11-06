@@ -46,10 +46,10 @@ public class FragmentDialogUnblockAll extends FragmentDialogBase {
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         final Context context = getContext();
-        final View dview = LayoutInflater.from(context).inflate(R.layout.dialog_unblock, null);
+        final DialogUnblockView unblockView = new DialogUnblockView(context);
 
         return new AlertDialog.Builder(context)
-                .setView(dview)
+                .setView(unblockView.getComposeView())
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
