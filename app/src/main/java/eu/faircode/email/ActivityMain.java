@@ -105,17 +105,11 @@ public class ActivityMain extends ActivityBase implements FragmentManager.OnBack
                 Helper.isPlayStoreInstall()) {
             setTheme(R.style.AppThemeBlueOrangeLight);
             super.onCreate(savedInstanceState);
-            setContentView(R.layout.activity_unsupported);
-
-            Button btnContinue = findViewById(R.id.btnContinue);
-            btnContinue.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    prefs.edit().putBoolean("accept_unsupported", true).commit();
-                    ApplicationEx.restart(v.getContext(), "accept_unsupported");
-                }
+            UnsupportedDeviceView unsupportedView = new UnsupportedDeviceView(this, () -> {
+                prefs.edit().putBoolean("accept_unsupported", true).commit();
+                ApplicationEx.restart(ActivityMain.this, "accept_unsupported");
             });
-
+            setContentView(unsupportedView.getComposeView());
             return;
         }
 
