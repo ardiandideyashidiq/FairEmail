@@ -7616,27 +7616,10 @@ public class AdapterMessage extends RecyclerView.Adapter<AdapterMessage.ViewHold
                 ibForceLight.setImageLevel(force_light ? 1 : 0);
                 bindBody(message, false);
             } else {
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && false) {
-                    View view = LayoutInflater.from(context).inflate(R.layout.dialog_dark, null);
-                    final Button btnIssue = view.findViewById(R.id.btnIssue);
-
-                    btnIssue.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            Helper.viewFAQ(v.getContext(), 81);
-                        }
-                    });
-
-                    new AlertDialog.Builder(context)
-                            .setView(view)
-                            .setNegativeButton(android.R.string.cancel, null)
-                            .show();
-                } else {
-                    Intent update = new Intent(Intent.ACTION_VIEW)
-                            .setData(Uri.parse(Helper.PACKAGE_WEBVIEW))
-                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    context.startActivity(update);
-                }
+                Intent update = new Intent(Intent.ACTION_VIEW)
+                        .setData(Uri.parse(Helper.PACKAGE_WEBVIEW))
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                context.startActivity(update);
             }
         }
 
