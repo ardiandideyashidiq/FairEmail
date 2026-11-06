@@ -37,7 +37,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 
 public class FragmentDialogSaveSearch extends FragmentDialogBase {
-    private ViewButtonColor btnColor;
+    private DialogSaveSearchView saveSearchView;
 
     @NonNull
     @Override
@@ -50,43 +50,41 @@ public class FragmentDialogSaveSearch extends FragmentDialogBase {
             criteria = new BoundaryCallbackMessages.SearchCriteria();
 
         final Context context = getContext();
-        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_save_search, null);
-        EditText etName = dview.findViewById(R.id.etName);
-        EditText etOrder = dview.findViewById(R.id.etOrder);
-        btnColor = dview.findViewById(R.id.btnColor);
+        String initialName = (criteria.name == null ? criteria.getTitle(context) : criteria.name);
+        String initialOrder = (criteria.order == null ? null : Integer.toString(criteria.order));
 
-        btnColor.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Helper.hideKeyboard(etName);
+        saveSearchView = new DialogSaveSearchView(
+                context,
+                initialName,
+                initialOrder,
+                criteria.color,
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        Bundle args = new Bundle();
+                        args.putInt("color", saveSearchView.getColor());
+                        args.putString("title", getString(R.string.title_color));
+                        args.putBoolean("reset", true);
 
-                Bundle args = new Bundle();
-                args.putInt("color", btnColor.getColor());
-                args.putString("title", getString(R.string.title_color));
-                args.putBoolean("reset", true);
-
-                FragmentDialogColor fragment = new FragmentDialogColor();
-                fragment.setArguments(args);
-                fragment.setTargetFragment(FragmentDialogSaveSearch.this, 1234);
-                fragment.show(getParentFragmentManager(), "search:color");
-            }
-        });
-
-        etName.setText(criteria.name == null ? criteria.getTitle(context) : criteria.name);
-        etOrder.setText(criteria.order == null ? null : Integer.toString(criteria.order));
-        btnColor.setColor(criteria.color);
+                        FragmentDialogColor fragment = new FragmentDialogColor();
+                        fragment.setArguments(args);
+                        fragment.setTargetFragment(FragmentDialogSaveSearch.this, 1234);
+                        fragment.show(getParentFragmentManager(), "search:color");
+                    }
+                }
+        );
 
         AlertDialog.Builder dialog = new AlertDialog.Builder(context)
-                .setView(dview)
+                .setView(saveSearchView.getComposeView())
                 .setPositiveButton(R.string.title_save, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        String order = etOrder.getText().toString();
-                        args.putString("name", etName.getText().toString());
+                        String order = saveSearchView.getOrder();
+                        args.putString("name", saveSearchView.getName());
                         args.putInt("order",
                                 !TextUtils.isEmpty(order) && TextUtils.isDigitsOnly(order)
                                         ? Integer.parseInt(order) : -1);
-                        args.putInt("color", btnColor.getColor());
+                        args.putInt("color", saveSearchView.getColor());
                         sendResult(Activity.RESULT_OK);
                     }
                 })
@@ -116,7 +114,8 @@ public class FragmentDialogSaveSearch extends FragmentDialogBase {
             if (resultCode == RESULT_OK && data != null) {
                 Bundle args = data.getBundleExtra("args");
                 int color = args.getInt("color");
-                btnColor.setColor(color);
+                if (saveSearchView != null)
+                    saveSearchView.setColor(color);
             }
         } catch (Throwable ex) {
             Log.e(ex);
