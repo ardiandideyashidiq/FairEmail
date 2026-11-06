@@ -597,40 +597,7 @@ public class FragmentDialogSelectFolder extends FragmentDialogBase {
         @Override
         public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
             final Context context = getContext();
-            View view = LayoutInflater.from(context).inflate(R.layout.dialog_folder_add, null);
-            final EditText etName = view.findViewById(R.id.etName);
-            final Spinner spParent = view.findViewById(R.id.spParent);
-
-            etName.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-                @Override
-                public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                    if (actionId != EditorInfo.IME_ACTION_DONE)
-                        return false;
-                    AlertDialog dialog = (AlertDialog) getDialog();
-                    if (dialog == null)
-                        return false;
-                    Button btnOk = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-                    if (btnOk == null)
-                        return false;
-                    btnOk.performClick();
-                    return true;
-                }
-            });
-
-            ArrayAdapter<String> adapter = new ArrayAdapter<>(context, R.layout.spinner_item1, android.R.id.text1);
-            adapter.setDropDownViewResource(R.layout.spinner_item1_dropdown);
-            spParent.setAdapter(adapter);
-
-            etName.setText(null);
-
-            view.post(new Runnable() {
-                @Override
-                public void run() {
-                    etName.requestFocus();
-                    Helper.showKeyboard(etName);
-                }
-            });
-
+            final DialogFolderAddView folderAddView = new DialogFolderAddView(context);
             new SimpleTask<List<String>>() {
                 @Override
                 protected List<String> onExecute(Context context, Bundle args) throws Throwable {
@@ -661,8 +628,7 @@ public class FragmentDialogSelectFolder extends FragmentDialogBase {
 
                 @Override
                 protected void onExecuted(Bundle args, List<String> parents) {
-                    adapter.clear();
-                    adapter.addAll(parents);
+                    folderAddView.setParents(parents);
                 }
 
                 @Override
@@ -672,14 +638,12 @@ public class FragmentDialogSelectFolder extends FragmentDialogBase {
             }.execute(this, getArguments(), "folder:parents");
 
             return new AlertDialog.Builder(context)
-                    .setView(view)
+                    .setView(folderAddView.getComposeView())
                     .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            String parent = (spParent.getSelectedItemPosition() == 0
-                                    ? null
-                                    : (String) spParent.getSelectedItem());
-                            String name = etName.getText().toString().trim();
+                            String parent = folderAddView.getSelectedParent();
+                            String name = folderAddView.getName();
                             if (TextUtils.isEmpty(name))
                                 sendResult(RESULT_CANCELED);
                             else {
