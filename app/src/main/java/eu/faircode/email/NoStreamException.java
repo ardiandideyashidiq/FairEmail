@@ -59,23 +59,10 @@ public class NoStreamException extends SecurityException {
         if (context == null)
             return;
 
-        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_no_stream, null);
-
-        TextView tvUri = dview.findViewById(R.id.tvUri);
-        ImageButton ibInfo = dview.findViewById(R.id.ibInfo);
-
-        //tvUri.setText(uri == null ? null : uri.toString());
-        tvUri.setVisibility(View.GONE); // TODO CASA URI
-
-        ibInfo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Helper.viewFAQ(v.getContext(), 49);
-            }
-        });
+        DialogNoStreamView streamView = new DialogNoStreamView(context, () -> Helper.viewFAQ(context, 49));
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setView(dview);
+        builder.setView(streamView.getComposeView());
         builder.setNegativeButton(android.R.string.cancel, null);
 
         // https://developer.android.com/about/versions/13/behavior-changes-13#granular-media-permissions
