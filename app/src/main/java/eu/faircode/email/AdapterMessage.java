@@ -6022,24 +6022,17 @@ public class AdapterMessage extends RecyclerView.Adapter<AdapterMessage.ViewHold
             if (open_amp_confirmed)
                 onShowAmpConfirmed(message);
             else {
-                LayoutInflater inflater = LayoutInflater.from(context);
-                View dview = inflater.inflate(R.layout.dialog_ask_amp, null, false);
-                final TextView tvRemark = dview.findViewById(R.id.tvRemark);
-                final CheckBox cbNotAgain = dview.findViewById(R.id.cbNotAgain);
-
-                tvRemark.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        Helper.view(v.getContext(), Uri.parse("https://amp.dev/about/email/"), true);
-                    }
-                });
+                final DialogAskAmpView askAmpView = new DialogAskAmpView(
+                        context,
+                        () -> Helper.view(context, Uri.parse("https://amp.dev/about/email/"), true)
+                );
 
                 new AlertDialog.Builder(context)
-                        .setView(dview)
+                        .setView(askAmpView.getComposeView())
                         .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
-                                if (cbNotAgain.isChecked())
+                                if (askAmpView.isNotAgain())
                                     prefs.edit().putBoolean("open_amp_confirmed", true).apply();
                                 onShowAmpConfirmed(message);
                             }
