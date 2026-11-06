@@ -25,7 +25,8 @@ fun SingleInputPrompt(
     textState: MutableState<String>,
     modifier: Modifier = Modifier,
     isNumber: Boolean = false,
-    isPassword: Boolean = false
+    isPassword: Boolean = false,
+    singleLine: Boolean = true
 ) {
     Column(
         modifier = modifier
@@ -40,7 +41,8 @@ fun SingleInputPrompt(
         OutlinedTextField(
             value = textState.value,
             onValueChange = { textState.value = it },
-            singleLine = true,
+            singleLine = singleLine,
+            maxLines = if (singleLine) 1 else 6,
             visualTransformation = if (isPassword) androidx.compose.ui.text.input.PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                 keyboardType = if (isNumber) androidx.compose.ui.text.input.KeyboardType.Number else androidx.compose.ui.text.input.KeyboardType.Text
@@ -57,7 +59,8 @@ class SingleInputPromptView @JvmOverloads constructor(
     @param:StringRes private val titleRes: Int,
     initialText: String = "",
     val isNumber: Boolean = false,
-    val isPassword: Boolean = false
+    val isPassword: Boolean = false,
+    val singleLine: Boolean = true
 ) {
     val textState: MutableState<String> = mutableStateOf(initialText)
 
@@ -71,7 +74,8 @@ class SingleInputPromptView @JvmOverloads constructor(
                     title = stringResource(id = titleRes),
                     textState = textState,
                     isNumber = isNumber,
-                    isPassword = isPassword
+                    isPassword = isPassword,
+                    singleLine = singleLine
                 )
             }
         }

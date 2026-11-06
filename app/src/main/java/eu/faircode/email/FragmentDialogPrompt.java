@@ -40,18 +40,22 @@ public class FragmentDialogPrompt extends FragmentDialogBase {
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         final Context context = getContext();
 
-        View view = LayoutInflater.from(context).inflate(R.layout.dialog_prompt, null);
-        final EditText etPrompt = view.findViewById(R.id.etPrompt);
-
-        etPrompt.setText(null);
+        final SingleInputPromptView promptView = new SingleInputPromptView(
+                context,
+                R.string.title_advanced_summarize_prompt,
+                "",
+                false,
+                false,
+                false
+        );
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context)
-                .setView(view)
+                .setView(promptView.getComposeView())
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         Bundle args = getArguments();
-                        args.putString("prompt", etPrompt.getText().toString());
+                        args.putString("prompt", promptView.getText());
                         sendResult(RESULT_OK);
                     }
                 })
