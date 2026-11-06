@@ -219,9 +219,9 @@ public class FragmentOptions extends FragmentBase {
                     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
                     boolean setup_advanced = prefs.getBoolean("setup_advanced", false);
                     if (!setup_advanced) {
-                        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_advanced, null);
+                        DialogAdvancedView dview = new DialogAdvancedView(context);
                         new AlertDialog.Builder(context)
-                                .setView(dview)
+                                .setView(dview.getComposeView())
                                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
