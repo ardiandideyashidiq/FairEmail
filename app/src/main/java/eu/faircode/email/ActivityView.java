@@ -38,7 +38,11 @@ import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Rect;
+import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
+import android.view.Gravity;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -598,10 +602,36 @@ public class ActivityView extends ActivityBilling implements FragmentManager.OnB
                             return null;
                     }
 
-                    View header = inflater.inflate(R.layout.item_nav_group, parent, false);
-                    TextView tvCategory = header.findViewById(R.id.tvCategory);
+                    FrameLayout header = new FrameLayout(ActivityView.this);
+                    header.setBackgroundColor(Helper.resolveColor(ActivityView.this, R.attr.colorDrawerBackground));
+                    LinearLayout layout = new LinearLayout(ActivityView.this);
+                    layout.setOrientation(LinearLayout.HORIZONTAL);
+                    layout.setGravity(Gravity.CENTER_VERTICAL);
+                    layout.setLayoutParams(new FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            Helper.dp2pixels(ActivityView.this, 42)));
 
+                    ImageView iv = new ImageView(ActivityView.this);
+                    iv.setImageResource(R.drawable.twotone_horizontal_rule_24);
+                    int px12 = Helper.dp2pixels(ActivityView.this, 12);
+                    LinearLayout.LayoutParams lpIv = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT);
+                    lpIv.setMarginStart(px12);
+                    layout.addView(iv, lpIv);
+
+                    TextView tvCategory = new TextView(ActivityView.this);
+                    tvCategory.setTextAppearance(ActivityView.this, androidx.appcompat.R.style.TextAppearance_AppCompat_Medium);
+                    tvCategory.setTypeface(Typeface.DEFAULT_BOLD);
                     tvCategory.setText(account.category);
+                    LinearLayout.LayoutParams lpTv = new LinearLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.WRAP_CONTENT);
+                    lpTv.setMarginStart(px12);
+                    lpTv.setMarginEnd(px12);
+                    layout.addView(tvCategory, lpTv);
+
+                    header.addView(layout);
 
                     header.measure(View.MeasureSpec.makeMeasureSpec(parent.getWidth(), View.MeasureSpec.EXACTLY),
                             View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
