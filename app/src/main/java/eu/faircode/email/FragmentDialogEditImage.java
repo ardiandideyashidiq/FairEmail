@@ -31,13 +31,17 @@ import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
 import android.text.style.StyleSpan;
 import android.util.Size;
-import android.view.LayoutInflater;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -66,16 +70,118 @@ public class FragmentDialogEditImage extends FragmentDialogBase {
         final int[] resizeValues = getResources().getIntArray(R.array.resizeValues);
 
         Context context = getContext();
-        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_edit_image, null);
-        ImageButton ibRotate = dview.findViewById(R.id.ibRotate);
-        ImageButton ibFlipHorizontally = dview.findViewById(R.id.ibFlipHorizontally);
-        ImageButton ibFlipVertically = dview.findViewById(R.id.ibFlipVertically);
-        ImageButton ibResize = dview.findViewById(R.id.ibResize);
-        ImageButton ibCancel = dview.findViewById(R.id.ibCancel);
-        ImageButton ibSave = dview.findViewById(R.id.ibSave);
-        CropImageView civ = dview.findViewById(R.id.civ);
-        ProgressBar pbWait = dview.findViewById(R.id.pbWait);
 
+        int p12 = Helper.dp2pixels(context, 12);
+        int p6 = Helper.dp2pixels(context, 6);
+        int p36 = Helper.dp2pixels(context, 36);
+        int p24 = Helper.dp2pixels(context, 24);
+        int minHeightCiv = Helper.dp2pixels(context, 60);
+        int colorAccent = Helper.resolveColor(context, androidx.appcompat.R.attr.colorAccent);
+
+        TypedValue outValue = new TypedValue();
+        context.getTheme().resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, outValue, true);
+        int selectableBgRes = outValue.resourceId;
+
+        FrameLayout dview = new FrameLayout(context);
+        dview.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        dview.setPadding(p12, p12, p12, p12);
+
+        LinearLayout contentLayout = new LinearLayout(context);
+        contentLayout.setOrientation(LinearLayout.VERTICAL);
+        dview.addView(contentLayout, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        CropImageView civ = new CropImageView(context);
+        civ.setMinimumHeight(minHeightCiv);
+        LinearLayout.LayoutParams lpCiv = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        contentLayout.addView(civ, lpCiv);
+
+        LinearLayout buttonBar = new LinearLayout(context);
+        buttonBar.setOrientation(LinearLayout.HORIZONTAL);
+        buttonBar.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams lpButtonBar = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lpButtonBar.topMargin = p12;
+        contentLayout.addView(buttonBar, lpButtonBar);
+
+        LinearLayout leftActions = new LinearLayout(context);
+        leftActions.setOrientation(LinearLayout.HORIZONTAL);
+        leftActions.setGravity(Gravity.CENTER_VERTICAL);
+        LinearLayout.LayoutParams lpLeft = new LinearLayout.LayoutParams(
+                0,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                1.0f);
+        buttonBar.addView(leftActions, lpLeft);
+
+        FixedImageButton ibRotate = new FixedImageButton(context);
+        ibRotate.setBackgroundResource(selectableBgRes);
+        ibRotate.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        ibRotate.setImageResource(R.drawable.twotone_rotate_right_24);
+        ibRotate.setColorFilter(colorAccent);
+        ibRotate.setContentDescription(getString(com.canhub.cropper.R.string.ic_rotate_right_24));
+        leftActions.addView(ibRotate, new LinearLayout.LayoutParams(p36, p36));
+
+        FixedImageButton ibFlipHorizontally = new FixedImageButton(context);
+        ibFlipHorizontally.setBackgroundResource(selectableBgRes);
+        ibFlipHorizontally.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        ibFlipHorizontally.setImageResource(R.drawable.twotone_swap_horiz_24);
+        ibFlipHorizontally.setColorFilter(colorAccent);
+        ibFlipHorizontally.setContentDescription(getString(com.canhub.cropper.R.string.ic_flip_24_horizontally));
+        LinearLayout.LayoutParams lpFlipH = new LinearLayout.LayoutParams(p36, p36);
+        lpFlipH.setMarginStart(p6);
+        leftActions.addView(ibFlipHorizontally, lpFlipH);
+
+        FixedImageButton ibFlipVertically = new FixedImageButton(context);
+        ibFlipVertically.setBackgroundResource(selectableBgRes);
+        ibFlipVertically.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        ibFlipVertically.setImageResource(R.drawable.twotone_swap_vert_24);
+        ibFlipVertically.setColorFilter(colorAccent);
+        ibFlipVertically.setContentDescription(getString(com.canhub.cropper.R.string.ic_flip_24_vertically));
+        LinearLayout.LayoutParams lpFlipV = new LinearLayout.LayoutParams(p36, p36);
+        lpFlipV.setMarginStart(p6);
+        leftActions.addView(ibFlipVertically, lpFlipV);
+
+        FixedImageButton ibResize = new FixedImageButton(context);
+        ibResize.setBackgroundResource(selectableBgRes);
+        ibResize.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        ibResize.setImageResource(R.drawable.twotone_open_in_full_24);
+        ibResize.setColorFilter(colorAccent);
+        ibResize.setContentDescription(getString(R.string.title_add_image_resize));
+        LinearLayout.LayoutParams lpResize = new LinearLayout.LayoutParams(p36, p36);
+        lpResize.setMarginStart(p6);
+        leftActions.addView(ibResize, lpResize);
+
+        FixedImageButton ibCancel = new FixedImageButton(context);
+        ibCancel.setBackgroundResource(selectableBgRes);
+        ibCancel.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        ibCancel.setImageResource(R.drawable.twotone_close_24);
+        ibCancel.setContentDescription(getString(android.R.string.cancel));
+        LinearLayout.LayoutParams lpCancel = new LinearLayout.LayoutParams(p36, p36);
+        lpCancel.setMarginStart(p6);
+        leftActions.addView(ibCancel, lpCancel);
+
+        FixedImageButton ibSave = new FixedImageButton(context);
+        ibSave.setBackgroundResource(selectableBgRes);
+        ibSave.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        ibSave.setImageResource(R.drawable.twotone_save_alt_24);
+        ibSave.setColorFilter(colorAccent);
+        ibSave.setContentDescription(getString(R.string.title_save));
+        buttonBar.addView(ibSave, new LinearLayout.LayoutParams(p36, p36));
+
+        ContentLoadingProgressBar pbWait = new ContentLoadingProgressBar(context);
+        pbWait.setIndeterminate(true);
+        pbWait.setPadding(p24, p24, p24, p24);
+        FrameLayout.LayoutParams lpPb = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lpPb.gravity = Gravity.CENTER;
+        dview.addView(pbWait, lpPb);
         Dialog dialog = new AlertDialog.Builder(context)
                 .setView(dview)
                 .create();
