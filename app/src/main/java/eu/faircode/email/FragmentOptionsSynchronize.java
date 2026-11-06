@@ -43,6 +43,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.TimePicker;
 
+import androidx.compose.ui.platform.ComposeView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SwitchCompat;
@@ -914,35 +915,27 @@ public class FragmentOptionsSynchronize extends FragmentBase implements SharedPr
 
         private List<DnsBlockList.BlockList> items;
 
-        public class ViewHolder extends RecyclerView.ViewHolder implements CompoundButton.OnCheckedChangeListener {
-            private CheckBox cbEnabled;
+        public class ViewHolder extends RecyclerView.ViewHolder {
+            private ComposeView composeView;
 
-            ViewHolder(View itemView) {
+            ViewHolder(ComposeView itemView) {
                 super(itemView);
-                cbEnabled = itemView.findViewById(R.id.cbEnabled);
-            }
-
-            private void wire() {
-                cbEnabled.setOnCheckedChangeListener(this);
-            }
-
-            private void unwire() {
-                cbEnabled.setOnCheckedChangeListener(null);
+                composeView = itemView;
             }
 
             private void bindTo(DnsBlockList.BlockList blocklist) {
-                cbEnabled.setText(blocklist.name);
-                cbEnabled.setChecked(DnsBlockList.isEnabled(context, blocklist));
-            }
-
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                int pos = getAdapterPosition();
-                if (pos == RecyclerView.NO_POSITION)
-                    return;
-
-                DnsBlockList.BlockList blocklist = items.get(pos);
-                DnsBlockList.setEnabled(context, blocklist, isChecked);
+                CheckboxItemBinder.bind(
+                    composeView,
+                    blocklist.name,
+                    DnsBlockList.isEnabled(context, blocklist),
+                    isChecked -> {
+                        int pos = getAdapterPosition();
+                        if (pos != RecyclerView.NO_POSITION) {
+                            DnsBlockList.BlockList item = items.get(pos);
+                            DnsBlockList.setEnabled(context, item, isChecked);
+                        }
+                    }
+                );
             }
         }
 
@@ -967,15 +960,13 @@ public class FragmentOptionsSynchronize extends FragmentBase implements SharedPr
         @Override
         @NonNull
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new ViewHolder(inflater.inflate(R.layout.item_blocklist_enabled, parent, false));
+            return new ViewHolder(CheckboxItemBinder.createComposeView(parent));
         }
 
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            holder.unwire();
             DnsBlockList.BlockList blocklist = items.get(position);
             holder.bindTo(blocklist);
-            holder.wire();
         }
     }
 }

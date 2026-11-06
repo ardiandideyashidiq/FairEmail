@@ -43,6 +43,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.compose.ui.platform.ComposeView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.widget.SwitchCompat;
@@ -739,35 +740,27 @@ public class FragmentOptionsPrivacy extends FragmentBase implements SharedPrefer
 
         private List<String> items;
 
-        public class ViewHolder extends RecyclerView.ViewHolder implements CompoundButton.OnCheckedChangeListener {
-            private CheckBox cbEnabled;
+        public class ViewHolder extends RecyclerView.ViewHolder {
+            private ComposeView composeView;
 
-            ViewHolder(View itemView) {
+            ViewHolder(ComposeView itemView) {
                 super(itemView);
-                cbEnabled = itemView.findViewById(R.id.cbEnabled);
-            }
-
-            private void wire() {
-                cbEnabled.setOnCheckedChangeListener(this);
-            }
-
-            private void unwire() {
-                cbEnabled.setOnCheckedChangeListener(null);
+                composeView = itemView;
             }
 
             private void bindTo(String category) {
-                cbEnabled.setText(category);
-                cbEnabled.setChecked(DisconnectBlacklist.isEnabled(context, category));
-            }
-
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                int pos = getAdapterPosition();
-                if (pos == RecyclerView.NO_POSITION)
-                    return;
-
-                String category = items.get(pos);
-                DisconnectBlacklist.setEnabled(context, category, isChecked);
+                CheckboxItemBinder.bind(
+                    composeView,
+                    category,
+                    DisconnectBlacklist.isEnabled(context, category),
+                    isChecked -> {
+                        int pos = getAdapterPosition();
+                        if (pos != RecyclerView.NO_POSITION) {
+                            String item = items.get(pos);
+                            DisconnectBlacklist.setEnabled(context, item, isChecked);
+                        }
+                    }
+                );
             }
         }
 
@@ -787,15 +780,13 @@ public class FragmentOptionsPrivacy extends FragmentBase implements SharedPrefer
         @Override
         @NonNull
         public AdapterDisconnect.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new AdapterDisconnect.ViewHolder(inflater.inflate(R.layout.item_disconnect_enabled, parent, false));
+            return new AdapterDisconnect.ViewHolder(CheckboxItemBinder.createComposeView(parent));
         }
 
         @Override
         public void onBindViewHolder(@NonNull AdapterDisconnect.ViewHolder holder, int position) {
-            holder.unwire();
             String category = items.get(position);
             holder.bindTo(category);
-            holder.wire();
         }
     }
 }
