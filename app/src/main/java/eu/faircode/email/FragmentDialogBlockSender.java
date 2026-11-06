@@ -41,24 +41,19 @@ public class FragmentDialogBlockSender extends FragmentDialogBase {
         long[] ids = getArguments().getLongArray("ids");
 
         final Context context = getContext();
-        final View view = LayoutInflater.from(context).inflate(R.layout.dialog_block_sender, null);
-        final TextView tvMessage = view.findViewById(R.id.tvMessage);
-        final TextView tvJunkHint = view.findViewById(R.id.tvJunkHint);
-
-        tvJunkHint.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Helper.viewFAQ(v.getContext(), 92);
-            }
-        });
 
         NumberFormat NF = NumberFormat.getNumberInstance();
         String msg = context.getResources().getQuantityString(R.plurals.title_ask_block_sender,
                 ids.length, NF.format(ids.length));
-        tvMessage.setText(msg);
+
+        DialogBlockSenderView blockView = new DialogBlockSenderView(
+                context,
+                msg,
+                () -> Helper.viewFAQ(context, 92)
+        );
 
         return new AlertDialog.Builder(context)
-                .setView(view)
+                .setView(blockView.getComposeView())
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
