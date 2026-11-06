@@ -29,6 +29,8 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.text.TextUtils;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.FragmentManager;
@@ -78,7 +80,11 @@ public class ActivityBilling extends ActivityBase implements PurchasingListener,
         this.standalone = standalone;
 
         if (standalone) {
-            setContentView(R.layout.activity_billing);
+            FrameLayout frame = new FrameLayout(this);
+            frame.setId(R.id.content_frame);
+            setContentView(frame, new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
 
             int count = getSupportFragmentManager().getBackStackEntryCount();
             if (count == 0) {

@@ -31,6 +31,8 @@ import android.os.Handler;
 import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Base64;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -96,7 +98,11 @@ public class ActivityBilling extends ActivityBase implements
         this.standalone = standalone;
 
         if (standalone) {
-            setContentView(R.layout.activity_billing);
+            FrameLayout frame = new FrameLayout(this);
+            frame.setId(R.id.content_frame);
+            setContentView(frame, new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
 
             int count = getSupportFragmentManager().getBackStackEntryCount();
             if (count == 0) {
