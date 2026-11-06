@@ -39,45 +39,33 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FragmentDialogSwipes extends FragmentDialogBase {
-    private Spinner spLeft;
-    private Spinner spRight;
-    private ArrayAdapter<EntityFolder> adapter;
-
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         final Context context = getContext();
-        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_swipes, null);
-        spLeft = dview.findViewById(R.id.spLeft);
-        spRight = dview.findViewById(R.id.spRight);
-
-        adapter = new ArrayAdapter<>(context, R.layout.spinner_item1, android.R.id.text1, new ArrayList<EntityFolder>());
-        adapter.setDropDownViewResource(R.layout.spinner_item1_dropdown);
-
-        spLeft.setAdapter(adapter);
-        spRight.setAdapter(adapter);
-
-        adapter.addAll(getFolderActions(context));
-
         final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         int leftPos = prefs.getInt("swipe_left_default", 2); // Trash
         int rightPos = prefs.getInt("swipe_right_default", 1); // Archive
 
-        spLeft.setSelection(leftPos);
-        spRight.setSelection(rightPos);
+        final DialogSwipesView swipesView = new DialogSwipesView(
+                context,
+                getFolderActions(context),
+                leftPos,
+                rightPos
+        );
 
         return new AlertDialog.Builder(context)
-                .setView(dview)
+                .setView(swipesView.getComposeView())
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         prefs.edit()
-                                .putInt("swipe_left_default", spLeft.getSelectedItemPosition())
-                                .putInt("swipe_right_default", spRight.getSelectedItemPosition())
+                                .putInt("swipe_left_default", swipesView.getSelectedLeftPosition())
+                                .putInt("swipe_right_default", swipesView.getSelectedRightPosition())
                                 .apply();
 
-                        EntityFolder left = (EntityFolder) spLeft.getSelectedItem();
-                        EntityFolder right = (EntityFolder) spRight.getSelectedItem();
+                        EntityFolder left = swipesView.getSelectedLeftFolder();
+                        EntityFolder right = swipesView.getSelectedRightFolder();
 
                         if ((left != null && EntityMessage.SWIPE_ACTION_HIDE.equals(left.id)) ||
                                 (right != null && EntityMessage.SWIPE_ACTION_HIDE.equals(right.id)))
@@ -85,7 +73,6 @@ public class FragmentDialogSwipes extends FragmentDialogBase {
                                     .putBoolean("message_tools", true)
                                     .putBoolean("button_hide", true)
                                     .apply();
-
                         new SimpleTask<Void>() {
                             @Override
                             protected Void onExecute(Context context, Bundle args) {
