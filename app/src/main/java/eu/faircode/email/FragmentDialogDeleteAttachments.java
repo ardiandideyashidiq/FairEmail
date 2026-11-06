@@ -32,6 +32,7 @@ import android.widget.CompoundButton;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.compose.ui.platform.ComposeView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -144,29 +145,17 @@ public class FragmentDialogDeleteAttachments extends FragmentDialogBase {
 
         private List<EntityAttachment> items = new ArrayList<>();
 
-        public class ViewHolder extends RecyclerView.ViewHolder implements CompoundButton.OnCheckedChangeListener {
-            private CheckBox cbEnabled;
-            private TextView tvInfo;
+        public class ViewHolder extends RecyclerView.ViewHolder {
+            private ComposeView composeView;
 
-            ViewHolder(View itemView) {
+            ViewHolder(ComposeView itemView) {
                 super(itemView);
-                cbEnabled = itemView.findViewById(R.id.cbEnabled);
-                tvInfo = itemView.findViewById(R.id.tvInfo);
-            }
-
-            private void wire() {
-                cbEnabled.setOnCheckedChangeListener(this);
-            }
-
-            private void unwire() {
-                cbEnabled.setOnCheckedChangeListener(null);
+                composeView = itemView;
             }
 
             private void bindTo(EntityAttachment attachment) {
-                cbEnabled.setText(attachment.name);
-                cbEnabled.setChecked(attachment.selected);
-                cbEnabled.setEnabled(attachment.encryption == null &&
-                        (attachment.size == null || attachment.size > 0));
+                boolean enabled = attachment.encryption == null &&
+                        (attachment.size == null || attachment.size > 0);
 
                 StringBuilder sb = new StringBuilder();
                 if (!TextUtils.isEmpty(attachment.type))
@@ -176,16 +165,19 @@ public class FragmentDialogDeleteAttachments extends FragmentDialogBase {
                         sb.append(' ');
                     sb.append(Helper.humanReadableByteCount(attachment.size));
                 }
-                tvInfo.setText(sb.toString());
-            }
 
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                int pos = getAdapterPosition();
-                if (pos == RecyclerView.NO_POSITION)
-                    return;
-
-                items.get(pos).selected = isChecked;
+                AttachmentSelectItemBinder.bind(
+                    composeView,
+                    attachment.name,
+                    sb.toString(),
+                    attachment.selected,
+                    enabled,
+                    isChecked -> {
+                        int pos = getAdapterPosition();
+                        if (pos != RecyclerView.NO_POSITION)
+                            items.get(pos).selected = isChecked;
+                    }
+                );
             }
         }
 
@@ -264,15 +256,13 @@ public class FragmentDialogDeleteAttachments extends FragmentDialogBase {
         @Override
         @NonNull
         public AdapterAttachmentSelect.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new AdapterAttachmentSelect.ViewHolder(inflater.inflate(R.layout.item_attachment_delete, parent, false));
+            return new AdapterAttachmentSelect.ViewHolder(AttachmentSelectItemBinder.createComposeView(parent));
         }
 
         @Override
         public void onBindViewHolder(@NonNull AdapterAttachmentSelect.ViewHolder holder, int position) {
-            holder.unwire();
             EntityAttachment attachment = items.get(position);
             holder.bindTo(attachment);
-            holder.wire();
         }
     }
 }
