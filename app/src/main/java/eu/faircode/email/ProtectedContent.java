@@ -332,20 +332,21 @@ public class ProtectedContent {
     }
 
     public static void showDialogEncrypt(Context context, LifecycleOwner owner, EditText etBody) {
-        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_password_protect, null);
-        TextInputLayout tilPassword1 = dview.findViewById(R.id.tilPassword1);
-        TextInputLayout tilPassword2 = dview.findViewById(R.id.tilPassword2);
-        Button btnInfo = dview.findViewById(R.id.btnInfo);
+        final AlertDialog[] dialogHolder = new AlertDialog[1];
+        final DialogPasswordProtectView protectView = new DialogPasswordProtectView(
+                context,
+                () -> Helper.viewFAQ(context, 184),
+                valid -> {
+                    if (dialogHolder[0] != null) {
+                        Button btnOk = dialogHolder[0].getButton(AlertDialog.BUTTON_POSITIVE);
+                        if (btnOk != null)
+                            btnOk.setEnabled(valid);
+                    }
+                }
+        );
 
-        btnInfo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Helper.viewFAQ(v.getContext(), 184);
-            }
-        });
-
-        AlertDialog dialog = new AlertDialog.Builder(context)
-                .setView(dview)
+        dialogHolder[0] = new AlertDialog.Builder(context)
+                .setView(protectView.getComposeView())
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
@@ -357,7 +358,7 @@ public class ProtectedContent {
 
                             Bundle args = new Bundle();
                             args.putCharSequence("text", edit.subSequence(start, end));
-                            args.putString("password", tilPassword1.getEditText().getText().toString());
+                            args.putString("password", protectView.getPassword());
                             args.putInt("start", start);
                             args.putInt("end", end);
 
@@ -395,48 +396,10 @@ public class ProtectedContent {
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
 
-        dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
-        // WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
-        dialog.show();
-
-        Button btnOk = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-
-        TextWatcher w = new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                // Do nothing
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // Do nothing
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                String p1 = tilPassword1.getEditText().getText().toString();
-                String p2 = tilPassword2.getEditText().getText().toString();
-                btnOk.setEnabled(!TextUtils.isEmpty(p1) && p1.equals(p2));
-                tilPassword2.setHint(!TextUtils.isEmpty(p2) && !p2.equals(p1)
-                        ? R.string.title_setup_password_different
-                        : R.string.title_setup_password_repeat);
-            }
-        };
-
-        tilPassword1.getEditText().addTextChangedListener(w);
-        tilPassword2.getEditText().addTextChangedListener(w);
-        w.afterTextChanged(null);
-
-        tilPassword2.getEditText().setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId == EditorInfo.IME_ACTION_DONE) {
-                    btnOk.performClick();
-                    return true;
-                } else
-                    return false;
-            }
-        });
+        dialogHolder[0].show();
+        Button btnOk = dialogHolder[0].getButton(AlertDialog.BUTTON_POSITIVE);
+        if (btnOk != null)
+            btnOk.setEnabled(false);
     }
 
     static String getContent(Context context, Spanned text) {
