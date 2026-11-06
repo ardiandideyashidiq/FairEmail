@@ -1900,29 +1900,20 @@ public class Helper {
             return;
         }
 
-        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_no_viewer, null);
-        TextView tvName = dview.findViewById(R.id.tvName);
-        TextView tvFullName = dview.findViewById(R.id.tvFullName);
-        TextView tvType = dview.findViewById(R.id.tvType);
-        TextView tvException = dview.findViewById(R.id.tvException);
-
         String title = intent.getStringExtra(Intent.EXTRA_TITLE);
         Uri data = intent.getData();
         String type = intent.getType();
         String fullName = (data == null ? intent.toString() : data.getLastPathSegment());
         String extension = (data == null ? null : getExtension(data.getLastPathSegment()));
 
-        tvName.setText(title == null ? fullName : title);
-        tvFullName.setText(fullName);
-        tvFullName.setVisibility(title == null ? View.GONE : View.VISIBLE);
+        String name = (title == null ? fullName : title);
+        String subFullName = (title == null ? null : fullName);
+        String exception = (ex == null ? null : new ThrowableWrapper(ex).toSafeString());
 
-        tvType.setText(type);
-
-        tvException.setText(ex == null ? null : new ThrowableWrapper(ex).toSafeString());
-        tvException.setVisibility(ex == null ? View.GONE : View.VISIBLE);
+        DialogNoViewerView viewerView = new DialogNoViewerView(context, name, subFullName, type, exception);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context)
-                .setView(dview)
+                .setView(viewerView.getComposeView())
                 .setNeutralButton(R.string.menu_faq, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
