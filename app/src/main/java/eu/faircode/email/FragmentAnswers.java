@@ -346,41 +346,18 @@ public class FragmentAnswers extends FragmentBase {
 
     private void onMenuDefine(String name) {
         final Context context = getContext();
-        View view = LayoutInflater.from(context).inflate(R.layout.dialog_placeholder, null);
-        final EditText etName = view.findViewById(R.id.etName);
-        final EditText etValue = view.findViewById(R.id.etValue);
-
-        etName.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                // Do nothing
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // Do nothing
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                String value = EntityAnswer.getCustomPlaceholder(context, s.toString().trim());
-                if (!TextUtils.isEmpty(value))
-                    etValue.setText(value);
-            }
-        });
-
-        etName.setText(name);
+        final DialogPlaceholderView placeholderView = new DialogPlaceholderView(context, name);
 
         new AlertDialog.Builder(context)
-                .setView(view)
+                .setView(placeholderView.getComposeView())
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        String name = etName.getText().toString().trim();
-                        String value = etValue.getText().toString();
-                        if (TextUtils.isEmpty(name))
+                        String n = placeholderView.getName().trim();
+                        String v = placeholderView.getValue();
+                        if (TextUtils.isEmpty(n))
                             return;
-                        EntityAnswer.setCustomPlaceholder(context, name, value);
+                        EntityAnswer.setCustomPlaceholder(context, n, v);
                         invalidateOptionsMenu();
                     }
                 })
