@@ -70,24 +70,28 @@ public class FragmentDialogTranslate extends FragmentDialogBase {
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         final Context context = getContext();
-        final View view = LayoutInflater.from(context).inflate(R.layout.dialog_translate, null);
-        final ImageButton ibAll = view.findViewById(R.id.ibAll);
-        final Spinner spLanguage = view.findViewById(R.id.spLanguage);
-        final TextView tvText = view.findViewById(R.id.tvText);
-        final ContentLoadingProgressBar pbWait = view.findViewById(R.id.pbWait);
+        final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        final List<DeepL.Language> languages = DeepL.getTargetLanguages(context, false);
+        String current = prefs.getString("deepl_target", null);
+        int initialIndex = 0;
+        if (current != null && languages != null) {
+            for (int pos = 0; pos < languages.size(); pos++) {
+                if (languages.get(pos).target.equals(current)) {
+                    initialIndex = pos;
+                    break;
+                }
+            }
+        }
 
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-        boolean compact = prefs.getBoolean("compact", false);
-        int zoom = prefs.getInt("view_zoom", compact ? 0 : 1);
-        int message_zoom = prefs.getInt("message_zoom", 100);
+        final DialogTranslateView[] translateViewHolder = new DialogTranslateView[1];
 
-        float textSize = Helper.getTextSize(context, zoom) * message_zoom / 100f;
-        tvText.setTextSize(TypedValue.COMPLEX_UNIT_PX, textSize);
-
-        ibAll.setOnClickListener(new View.OnClickListener() {
+        final Runnable onTranslateAll = new Runnable() {
             @Override
-            public void onClick(View v) {
-                DeepL.Language language = (DeepL.Language) spLanguage.getSelectedItem();
+            public void run() {
+                final DialogTranslateView translateView = translateViewHolder[0];
+                if (translateView == null)
+                    return;
+                DeepL.Language language = translateView.getSelectedLanguage();
                 if (language == null)
                     return;
 
@@ -98,12 +102,12 @@ public class FragmentDialogTranslate extends FragmentDialogBase {
                 new SimpleTask<DeepL.Translation>() {
                     @Override
                     protected void onPreExecute(Bundle args) {
-                        ibAll.setEnabled(false);
+                        translateView.setTranslateAllEnabled(false);
                     }
 
                     @Override
                     protected void onPostExecute(Bundle args) {
-                        ibAll.setEnabled(true);
+                        translateView.setTranslateAllEnabled(true);
                     }
 
                     @Override
@@ -131,7 +135,7 @@ public class FragmentDialogTranslate extends FragmentDialogBase {
                         ssb.setSpan(new StyleSpan(Typeface.ITALIC), 0, lang.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                         ssb.setSpan(new RelativeSizeSpan(HtmlHelper.FONT_SMALL), 0, lang.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
 
-                        tvText.setText(ssb);
+                        translateView.getTextView().setText(ssb);
                     }
 
                     @Override
@@ -140,76 +144,44 @@ public class FragmentDialogTranslate extends FragmentDialogBase {
                     }
                 }.execute(FragmentDialogTranslate.this, args, "translate:all");
             }
-        });
+        };
 
-        List<DeepL.Language> languages = DeepL.getTargetLanguages(context, false);
-        ArrayAdapter<DeepL.Language> adapter = new ArrayAdapter<DeepL.Language>(context, android.R.layout.simple_spinner_item, android.R.id.text1, languages) {
-            @NonNull
+        final kotlin.jvm.functions.Function1<Integer, kotlin.Unit> onLanguageSelected = new kotlin.jvm.functions.Function1<Integer, kotlin.Unit>() {
             @Override
-            public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-                return _getView(position, super.getView(position, convertView, parent));
-            }
-
-            @Override
-            public View getDropDownView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-                return _getView(position, super.getDropDownView(position, convertView, parent));
-            }
-
-            private View _getView(int position, View view) {
-                DeepL.Language language = getItem(position);
-                if (language != null && language.icon != null && language.name != null) {
-                    TextView tv = view.findViewById(android.R.id.text1);
-
-                    Drawable icon = ContextCompat.getDrawable(context, language.icon);
-                    int iconSize = context.getResources()
-                            .getDimensionPixelSize(R.dimen.menu_item_icon_size);
-                    icon.setBounds(0, 0, iconSize, iconSize);
-                    ImageSpan imageSpan = new CenteredImageSpan(icon);
-
-                    SpannableStringBuilder ssb = new SpannableStringBuilderEx(language.name);
-                    ssb.insert(0, "\uFFFC\u2002"); // object replacement character, en space
-                    ssb.setSpan(imageSpan, 0, 1, 0);
-
-                    tv.setText(ssb);
+            public kotlin.Unit invoke(Integer position) {
+                if (languages != null && position >= 0 && position < languages.size()) {
+                    prefs.edit().putString("deepl_target", languages.get(position).target).apply();
                 }
-
-                return view;
+                return kotlin.Unit.INSTANCE;
             }
         };
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spLanguage.setAdapter(adapter);
 
-        String current = prefs.getString("deepl_target", null);
+        final DialogTranslateView translateView = new DialogTranslateView(
+                context,
+                languages != null ? languages : java.util.Collections.<DeepL.Language>emptyList(),
+                initialIndex,
+                onTranslateAll,
+                onLanguageSelected
+        );
+        translateViewHolder[0] = translateView;
 
-        for (int pos = 0; pos < languages.size(); pos++)
-            if (languages.get(pos).target.equals(current)) {
-                spLanguage.setSelection(pos);
-                break;
-            }
-
-        spLanguage.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                prefs.edit().putString("deepl_target", languages.get(position).target).apply();
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-                prefs.edit().remove("deepl_target").apply();
-            }
-        });
-
+        boolean compact = prefs.getBoolean("compact", false);
+        int zoom = prefs.getInt("view_zoom", compact ? 0 : 1);
+        int message_zoom = prefs.getInt("message_zoom", 100);
+        float textSize = Helper.getTextSize(context, zoom) * message_zoom / 100f;
+        final TextView tvText = translateView.getTextView();
+        tvText.setTextSize(TypedValue.COMPLEX_UNIT_PX, textSize);
         tvText.setText(null);
 
         new SimpleTask<String>() {
             @Override
             protected void onPreExecute(Bundle args) {
-                pbWait.setVisibility(View.VISIBLE);
+                translateView.setLoading(true);
             }
 
             @Override
             protected void onPostExecute(Bundle args) {
-                pbWait.setVisibility(View.GONE);
+                translateView.setLoading(false);
             }
 
             @Override
@@ -253,7 +225,7 @@ public class FragmentDialogTranslate extends FragmentDialogBase {
                         final StyleSpan mark = new StyleSpan(Typeface.ITALIC);
                         buffer.setSpan(mark, start, end, 0);
 
-                        DeepL.Language language = (DeepL.Language) spLanguage.getSelectedItem();
+                        DeepL.Language language = translateView.getSelectedLanguage();
                         if (language == null)
                             return;
 
@@ -264,12 +236,12 @@ public class FragmentDialogTranslate extends FragmentDialogBase {
                         new SimpleTask<DeepL.Translation>() {
                             @Override
                             protected void onPreExecute(Bundle args) {
-                                pbWait.setVisibility(View.VISIBLE);
+                                translateView.setLoading(true);
                             }
 
                             @Override
                             protected void onPostExecute(Bundle args) {
-                                pbWait.setVisibility(View.GONE);
+                                translateView.setLoading(false);
                             }
 
                             @Override
@@ -326,7 +298,7 @@ public class FragmentDialogTranslate extends FragmentDialogBase {
         }.execute(this, getArguments(), "message:translate");
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context)
-                .setView(view)
+                .setView(translateView.getComposeView())
                 .setPositiveButton(android.R.string.cancel, null)
                 .setNeutralButton(R.string.title_copy_btn, new DialogInterface.OnClickListener() {
                     @Override
