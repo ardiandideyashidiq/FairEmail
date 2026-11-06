@@ -24,15 +24,15 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
+import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-
-import androidx.compose.ui.platform.ComposeView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -51,12 +51,23 @@ public class FragmentDialogDeleteAttachments extends FragmentDialogBase {
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         final Context context = getContext();
 
-        final View dview = LayoutInflater.from(context).inflate(R.layout.dialog_delete_attachments, null);
-        final RecyclerView rvAttachment = dview.findViewById(R.id.rvAttachment);
-        final ProgressBar pbWait = dview.findViewById(R.id.pbWait);
+        FrameLayout dview = new FrameLayout(context);
+        int p12 = Helper.dp2pixels(context, 12);
+        dview.setPadding(p12, p12, p12, p12);
 
+        final FixedRecyclerView rvAttachment = new FixedRecyclerView(context);
         rvAttachment.setHasFixedSize(false);
         rvAttachment.setLayoutManager(new LinearLayoutManager(context));
+        dview.addView(rvAttachment, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        final ContentLoadingProgressBar pbWait = new ContentLoadingProgressBar(context);
+        FrameLayout.LayoutParams lpPb = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lpPb.gravity = Gravity.CENTER;
+        dview.addView(pbWait, lpPb);
 
         AdapterAttachmentSelect adapter = new AdapterAttachmentSelect(context);
         rvAttachment.setAdapter(adapter);
@@ -65,11 +76,13 @@ public class FragmentDialogDeleteAttachments extends FragmentDialogBase {
             @Override
             protected void onPreExecute(Bundle args) {
                 pbWait.setVisibility(View.VISIBLE);
+                rvAttachment.setVisibility(View.GONE);
             }
 
             @Override
             protected void onPostExecute(Bundle args) {
                 pbWait.setVisibility(View.GONE);
+                rvAttachment.setVisibility(View.VISIBLE);
             }
 
             @Override
