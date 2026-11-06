@@ -21,17 +21,32 @@ package eu.faircode.email;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.ColorStateList;
+import android.graphics.Typeface;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.text.util.Linkify;
+import android.view.Gravity;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ImageButton;
+import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
+import androidx.appcompat.widget.AppCompatButton;
+import androidx.appcompat.widget.AppCompatImageButton;
+import androidx.appcompat.widget.AppCompatTextView;
+import androidx.cardview.widget.CardView;
+import androidx.core.content.ContextCompat;
 import androidx.core.text.method.LinkMovementMethodCompat;
-
+import androidx.core.widget.TextViewCompat;
 import java.util.List;
 
 public class ActivityError extends ActivityBase {
@@ -50,21 +65,160 @@ public class ActivityError extends ActivityBase {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        FrameLayout root = new FrameLayout(this);
 
-        setContentView(R.layout.activity_error);
+        ScrollView scrollView = new ScrollView(this);
+        scrollView.setVerticalScrollBarEnabled(true);
+        scrollView.setScrollBarStyle(View.SCROLLBARS_OUTSIDE_OVERLAY);
+        int p6 = Helper.dp2pixels(this, 6);
+        int p12 = Helper.dp2pixels(this, 12);
+        int p24 = Helper.dp2pixels(this, 24);
+        scrollView.setPadding(p6, p12, p6, p12);
+        scrollView.setClipToPadding(false);
+
+        CardView cardMessage = new CardView(this);
+        FrameLayout.LayoutParams lpCard = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lpCard.setMargins(Helper.dp2pixels(this, 3), 0, Helper.dp2pixels(this, 3), 0);
+        cardMessage.setLayoutParams(lpCard);
+        cardMessage.setCardBackgroundColor(Helper.resolveColor(this, R.attr.colorCardBackground));
+        cardMessage.setRadius(Helper.dp2pixels(this, 6));
+        cardMessage.setCardElevation(0);
+
+        LinearLayout cardContent = new LinearLayout(this);
+        cardContent.setOrientation(LinearLayout.VERTICAL);
+        cardContent.setPadding(p6, p12, p6, p12);
+
+        int colorWarning = Helper.resolveColor(this, R.attr.colorWarning);
+        int textColorPrimary = Helper.resolveColor(this, android.R.attr.textColorPrimary);
+        int colorError = Helper.resolveColor(this, androidx.appcompat.R.attr.colorError);
+
+        tvTitle = new AppCompatTextView(this);
+        tvTitle.setText("Error");
+        TextViewCompat.setTextAppearance(tvTitle, androidx.appcompat.R.style.TextAppearance_AppCompat_Medium);
+        tvTitle.setTextColor(textColorPrimary);
+        tvTitle.setTypeface(null, Typeface.BOLD);
+        tvTitle.setCompoundDrawablesWithIntrinsicBounds(R.drawable.twotone_warning_24, 0, 0, 0);
+        tvTitle.setCompoundDrawablePadding(p6);
+        TextViewCompat.setCompoundDrawableTintList(tvTitle, ColorStateList.valueOf(colorWarning));
+        cardContent.addView(tvTitle, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        tvMessage = new AppCompatTextView(this);
+        tvMessage.setText("Error");
+        TextViewCompat.setTextAppearance(tvMessage, androidx.appcompat.R.style.TextAppearance_AppCompat_Small);
+        tvMessage.setTextColor(colorWarning);
+        tvMessage.setTextIsSelectable(true);
+        tvMessage.setAutoLinkMask(Linkify.EMAIL_ADDRESSES | Linkify.WEB_URLS);
+        tvMessage.setTypeface(null, Typeface.BOLD);
+        LinearLayout.LayoutParams lpMessage = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lpMessage.topMargin = p24;
+        cardContent.addView(tvMessage, lpMessage);
+
+        tvCertificate = new AppCompatTextView(this);
+        tvCertificate.setText(R.string.title_certificate_error);
+        TextViewCompat.setTextAppearance(tvCertificate, androidx.appcompat.R.style.TextAppearance_AppCompat_Medium);
+        tvCertificate.setTextColor(colorError);
+        tvCertificate.setTypeface(null, Typeface.BOLD_ITALIC);
+        LinearLayout.LayoutParams lpCert = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lpCert.topMargin = p24;
+        cardContent.addView(tvCertificate, lpCert);
+
+        btnPassword = new AppCompatButton(this);
+        btnPassword.setText(R.string.title_password);
+        btnPassword.setCompoundDrawablePadding(p6);
+        LinearLayout.LayoutParams lpPassword = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lpPassword.topMargin = p24;
+        cardContent.addView(btnPassword, lpPassword);
+
+        RelativeLayout layoutButtons = new RelativeLayout(this);
+        LinearLayout.LayoutParams lpButtons = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lpButtons.topMargin = p24;
+
+        ibSetting = new AppCompatImageButton(this);
+        ibSetting.setImageResource(R.drawable.twotone_settings_24);
+        ibSetting.setContentDescription(getString(R.string.title_setup));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            ibSetting.setTooltipText(getString(R.string.title_setup));
+        RelativeLayout.LayoutParams lpSetting = new RelativeLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lpSetting.addRule(RelativeLayout.ALIGN_PARENT_START);
+        layoutButtons.addView(ibSetting, lpSetting);
+
+        ibInfo = new AppCompatImageButton(this);
+        ibInfo.setImageResource(R.drawable.twotone_info_24);
+        ibInfo.setContentDescription(getString(R.string.title_info));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+            ibInfo.setTooltipText(getString(R.string.title_info));
+        RelativeLayout.LayoutParams lpInfo = new RelativeLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lpInfo.addRule(RelativeLayout.ALIGN_PARENT_END);
+        layoutButtons.addView(ibInfo, lpInfo);
+
+        cardContent.addView(layoutButtons, lpButtons);
+
+        btnReload = new AppCompatButton(this);
+        btnReload.setText(R.string.title_boundary_retry);
+        btnReload.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.twotone_sync_24, 0);
+        btnReload.setCompoundDrawablePadding(p6);
+        LinearLayout.LayoutParams lpReload = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lpReload.topMargin = p24;
+        cardContent.addView(btnReload, lpReload);
+
+        btnSupport = new AppCompatButton(this);
+        btnSupport.setText(R.string.menu_faq);
+        btnSupport.setCompoundDrawablesWithIntrinsicBounds(0, 0, R.drawable.twotone_support_24, 0);
+        btnSupport.setCompoundDrawablePadding(p6);
+        LinearLayout.LayoutParams lpSupport = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lpSupport.topMargin = p24;
+        cardContent.addView(btnSupport, lpSupport);
+
+        TextView tvSupport = new AppCompatTextView(this);
+        tvSupport.setText(R.string.app_error);
+        TextViewCompat.setTextAppearance(tvSupport, androidx.appcompat.R.style.TextAppearance_AppCompat_Small);
+        tvSupport.setTypeface(null, Typeface.BOLD_ITALIC);
+        LinearLayout.LayoutParams lpTvSupport = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lpTvSupport.topMargin = p12;
+        cardContent.addView(tvSupport, lpTvSupport);
+
+        cardMessage.addView(cardContent);
+        scrollView.addView(cardMessage, new ScrollView.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        root.addView(scrollView, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+
+        ContentLoadingProgressBar pbWait = new ContentLoadingProgressBar(this);
+        FrameLayout.LayoutParams lpPb = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lpPb.gravity = Gravity.CENTER;
+        pbWait.setVisibility(View.GONE);
+        root.addView(pbWait, lpPb);
+
+        setContentView(root);
 
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setSubtitle(getString(R.string.title_setup_error));
-
-        tvTitle = findViewById(R.id.tvTitle);
-        tvMessage = findViewById(R.id.tvMessage);
-        tvCertificate = findViewById(R.id.tvCertificate);
-        btnPassword = findViewById(R.id.btnPassword);
-        ibSetting = findViewById(R.id.ibSetting);
-        ibInfo = findViewById(R.id.ibInfo);
-        btnReload = findViewById(R.id.btnReload);
-        btnSupport = findViewById(R.id.btnSupport);
-
         load();
     }
 
