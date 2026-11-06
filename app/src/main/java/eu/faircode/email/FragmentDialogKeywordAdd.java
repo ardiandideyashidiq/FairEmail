@@ -40,16 +40,14 @@ public class FragmentDialogKeywordAdd extends FragmentDialogBase {
         Bundle args = getArguments();
         final Context context = getContext();
 
-        View view = LayoutInflater.from(context).inflate(R.layout.dialog_keyword_add, null);
-        final EditText etKeyword = view.findViewById(R.id.etKeyword);
-        etKeyword.setText(null);
+        final DialogKeywordAddView keywordView = new DialogKeywordAddView(context);
 
         return new AlertDialog.Builder(context)
-                .setView(view)
+                .setView(keywordView.getComposeView())
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        String keyword = MessageHelper.sanitizeKeyword(etKeyword.getText().toString());
+                        String keyword = MessageHelper.sanitizeKeyword(keywordView.getText());
                         if (!TextUtils.isEmpty(keyword)) {
                             args.putString("keyword", keyword);
 
