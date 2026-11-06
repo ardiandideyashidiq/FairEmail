@@ -20,12 +20,10 @@ package eu.faircode.email;
 */
 
 import android.content.Context;
-import android.view.LayoutInflater;
-import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.compose.ui.platform.ComposeView;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleObserver;
@@ -44,27 +42,20 @@ public class AdapterOrder extends RecyclerView.Adapter<AdapterOrder.ViewHolder> 
     private Fragment parentFragment;
     private Context context;
     private LifecycleOwner owner;
-    private LayoutInflater inflater;
 
     private List<EntityOrder> items = new ArrayList<>();
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        private View view;
-        private TextView tvTitle;
-        private TextView tvSubTitle;
+        private ComposeView composeView;
 
-        ViewHolder(View itemView) {
+        ViewHolder(ComposeView itemView) {
             super(itemView);
-
-            view = itemView.findViewById(R.id.clItem);
-            tvTitle = itemView.findViewById(R.id.tvTitle);
-            tvSubTitle = itemView.findViewById(R.id.tvSubTitle);
+            this.composeView = itemView;
         }
 
         private void bindTo(EntityOrder item) {
             String[] text = item.getSortTitle(context);
-            tvTitle.setText(text[0]);
-            tvSubTitle.setText(text[1]);
+            OrderItemBinder.bind(composeView, text[0], text[1]);
         }
     }
 
@@ -72,7 +63,6 @@ public class AdapterOrder extends RecyclerView.Adapter<AdapterOrder.ViewHolder> 
         this.parentFragment = parentFragment;
         this.context = parentFragment.getContext();
         this.owner = parentFragment.getViewLifecycleOwner();
-        this.inflater = LayoutInflater.from(context);
 
         setHasStableIds(true);
 
@@ -200,7 +190,7 @@ public class AdapterOrder extends RecyclerView.Adapter<AdapterOrder.ViewHolder> 
     @Override
     @NonNull
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        return new ViewHolder(inflater.inflate(R.layout.item_order, parent, false));
+        return new ViewHolder(OrderItemBinder.createComposeView(parent));
     }
 
     @Override
