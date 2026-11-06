@@ -32,21 +32,11 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
-import android.text.TextWatcher;
 import android.text.style.URLSpan;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.EditText;
-import android.widget.ProgressBar;
-import android.widget.SeekBar;
-import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.constraintlayout.widget.Group;
 import androidx.documentfile.provider.DocumentFile;
 import androidx.preference.PreferenceManager;
 
@@ -62,15 +52,7 @@ import java.nio.charset.StandardCharsets;
 import javax.net.ssl.HttpsURLConnection;
 
 public class FragmentDialogInsertLink extends FragmentDialogBase {
-    private EditText etLink;
-    private CheckBox cbImage;
-    private EditText etTitle;
-    private Button btnUpload;
-    private ProgressBar pbUpload;
-    private TextView tvDLimit;
-    private SeekBar sbDLimit;
-    private TextView tvTLimit;
-    private SeekBar sbTLimit;
+    private DialogInsertLinkView view;
 
     private static final int METADATA_CONNECT_TIMEOUT = 10 * 1000; // milliseconds
     private static final int METADATA_READ_TIMEOUT = 15 * 1000; // milliseconds
@@ -84,8 +66,8 @@ public class FragmentDialogInsertLink extends FragmentDialogBase {
 
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
-        outState.putString("fair:link", etLink == null ? null : etLink.getText().toString());
-        outState.putString("fair:text", etTitle == null ? null : etTitle.getText().toString());
+        outState.putString("fair:link", view == null ? null : view.getLink());
+        outState.putString("fair:text", view == null ? null : view.getTitle());
         super.onSaveInstanceState(outState);
     }
 
@@ -109,269 +91,197 @@ public class FragmentDialogInsertLink extends FragmentDialogBase {
             }
 
         final Context context = getContext();
-        View view = LayoutInflater.from(context).inflate(R.layout.dialog_insert_link, null);
-        etLink = view.findViewById(R.id.etLink);
-        cbImage = view.findViewById(R.id.cbImage);
-        final TextView tvInsecure = view.findViewById(R.id.tvInsecure);
-        etTitle = view.findViewById(R.id.etTitle);
-        final Button btnMetadata = view.findViewById(R.id.btnMetadata);
-        final ProgressBar pbWait = view.findViewById(R.id.pbWait);
-        btnUpload = view.findViewById(R.id.btnUpload);
-        pbUpload = view.findViewById(R.id.pbUpload);
-        tvDLimit = view.findViewById(R.id.tvDLimit);
-        sbDLimit = view.findViewById(R.id.sbDLimit);
-        tvTLimit = view.findViewById(R.id.tvTLimit);
-        sbTLimit = view.findViewById(R.id.sbTLimit);
-        Group grpUpload = view.findViewById(R.id.grpUpload);
-
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         boolean send_enabled = prefs.getBoolean("send_enabled", false);
 
-        etLink.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {
-                if (tvInsecure == null || btnMetadata == null)
-                    return;
-
-                Uri uri = Uri.parse(editable.toString());
-                tvInsecure.setVisibility(
-                        !UriHelper.isHyperLink(uri) || UriHelper.isSecure(uri)
-                                ? View.GONE : View.VISIBLE);
-                btnMetadata.setEnabled(UriHelper.isSecure(uri));
-            }
-        });
-
-        btnMetadata.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Bundle args = new Bundle();
-                args.putString("url", etLink.getText().toString());
-
-                new SimpleTask<OpenGraph>() {
-                    @Override
-                    protected void onPreExecute(Bundle args) {
-                        btnMetadata.setEnabled(false);
-                        pbWait.setVisibility(View.VISIBLE);
-                    }
-
-                    @Override
-                    protected void onPostExecute(Bundle args) {
-                        btnMetadata.setEnabled(true);
-                        pbWait.setVisibility(View.GONE);
-                    }
-
-                    @Override
-                    protected OpenGraph onExecute(Context context, Bundle args) throws Throwable {
-                        String url = args.getString("url");
-                        URL base = new URL(url);
-
-                        OpenGraph og = new OpenGraph();
-
-                        HttpsURLConnection connection = (HttpsURLConnection) base.openConnection();
-                        connection.setRequestMethod("GET");
-                        connection.setReadTimeout(METADATA_READ_TIMEOUT);
-                        connection.setConnectTimeout(METADATA_CONNECT_TIMEOUT);
-                        connection.setInstanceFollowRedirects(true);
-                        ConnectionHelper.setUserAgent(context, connection);
-                        connection.connect();
-
-                        try {
-                            int status = connection.getResponseCode();
-                            if (status != HttpsURLConnection.HTTP_OK) {
-                                String error = "Error " + status + ": " + connection.getResponseMessage();
-                                try {
-                                    InputStream is = connection.getErrorStream();
-                                    if (is != null)
-                                        error += "\n" + Helper.readStream(is);
-                                } catch (Throwable ex) {
-                                    Log.w(ex);
-                                }
-                                throw new IOException(error);
-                            }
-
-                            // <title>...
-                            // <meta name="description" content="...
-                            // https://ogp.me/
-                            Document doc = JsoupEx.parse(connection.getInputStream(), StandardCharsets.UTF_8.name(), url);
-
-                            Element ogTitle = doc.select("meta[property=og:title]").first();
-                            if (ogTitle != null)
-                                og.title = ogTitle.attr("content");
-
-                            // Fallback
-                            if (TextUtils.isEmpty(og.title)) {
-                                Element title = doc.select("title").first();
-                                if (title != null)
-                                    og.title = title.text();
-                            }
-
-                            Element ogDescription = doc.select("meta[property=og:description]").first();
-                            if (ogDescription != null)
-                                og.description = ogDescription.attr("content");
-
-                            // Fallback
-                            if (TextUtils.isEmpty(og.description)) {
-                                Element description = doc.select("meta[name=description]").first();
-                                if (description != null)
-                                    og.description = description.attr("content");
-                            }
-
-                            Element ogSiteName = doc.select("meta[property=og:site_name]").first();
-                            if (ogSiteName != null)
-                                og.site_name = ogSiteName.attr("content");
-
-                            Element ogImage = doc.select("meta[property=og:image]").first();
-                            if (ogImage != null)
-                                og.image = ogImage.attr("content");
-
-                            Element ogUrl = doc.select("meta[property=og:url]").first();
-                            if (ogUrl != null)
-                                og.url = ogUrl.attr("content");
-
-                            return og;
-                        } finally {
-                            connection.disconnect();
-                        }
-                    }
-
-                    @Override
-                    protected void onExecuted(Bundle args, OpenGraph og) {
-                        if (og == null)
-                            return;
-
-                        // Canonical URL
-                        if (!TextUtils.isEmpty(og.url))
-                            etLink.setText(og.url);
-
-                        // Link title
-                        String text = og.title;
-                        if (TextUtils.isEmpty(text))
-                            text = og.description;
-                        if (TextUtils.isEmpty(text))
-                            text = og.site_name;
-
-                        if (TextUtils.isEmpty(text))
-                            etTitle.setText(null);
-                        else
-                            etTitle.setText(text.replaceAll("\\s+", " "));
-                    }
-
-                    @Override
-                    protected void onException(Bundle args, Throwable ex) {
-                        Log.unexpectedError(getParentFragmentManager(), ex, !(ex instanceof IOException));
-                    }
-                }.execute(FragmentDialogInsertLink.this, args, "link:meta");
-            }
-        });
-
-        btnUpload.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.addCategory(Intent.CATEGORY_OPENABLE);
-                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-                intent.setType("*/*");
-                startActivityForResult(Helper.getChooser(getContext(), intent), REQUEST_SEND);
-            }
-        });
-
-        sbDLimit.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                prefs.edit().putInt("send_dlimit", progress).apply();
-
-                progress++;
-
-                tvDLimit.setText(getString(R.string.title_style_link_send_dlimit, Integer.toString(progress)));
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-                // Do nothing
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                // Do nothing
-            }
-        });
-
-        sbTLimit.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                prefs.edit().putInt("send_tlimit", progress).apply();
-
-                progress++;
-
-                if (progress < 24)
-                    tvTLimit.setText(getString(R.string.title_style_link_send_tlimit,
-                            getResources().getQuantityString(R.plurals.title_hours, progress, progress)));
-                else {
-                    progress = (progress - 24 + 1);
-                    tvTLimit.setText(getString(R.string.title_style_link_send_tlimit,
-                            getResources().getQuantityString(R.plurals.title_days, progress, progress)));
-                }
-            }
-
-            @Override
-            public void onStartTrackingTouch(SeekBar seekBar) {
-                // Do nothing
-            }
-
-            @Override
-            public void onStopTrackingTouch(SeekBar seekBar) {
-                // Do nothing
-            }
-        });
-
+        String initialLink;
+        String initialTitle;
         if (savedInstanceState == null) {
             String link = (uri == null ? "https://" : uri.toString());
-            etLink.setText(link);
-            etTitle.setText(link.equals(title) ? null : title);
+            initialLink = link;
+            initialTitle = (link.equals(title) ? null : title);
         } else {
-            etLink.setText(savedInstanceState.getString("fair:link"));
-            etTitle.setText(savedInstanceState.getString("fair:text"));
+            initialLink = savedInstanceState.getString("fair:link");
+            initialTitle = savedInstanceState.getString("fair:text");
         }
 
         int dlimit = prefs.getInt("send_dlimit", Send.DEFAULT_DLIMIT - 1);
         int tlimit = prefs.getInt("send_tlimit", Send.DEFAULT_TLIMIT - 1);
-        sbDLimit.setProgress(dlimit == 0 ? 1 : 0);
-        sbTLimit.setProgress(tlimit == 0 ? 1 : 0);
-        sbDLimit.setProgress(dlimit);
-        sbTLimit.setProgress(tlimit);
 
-        pbWait.setVisibility(View.GONE);
-        pbUpload.setVisibility(View.GONE);
-        grpUpload.setVisibility(send_enabled && !BuildConfig.PLAY_STORE_RELEASE
-                ? View.VISIBLE : View.GONE);
+        view = new DialogInsertLinkView(
+                context,
+                initialLink,
+                initialTitle,
+                false,
+                send_enabled && !BuildConfig.PLAY_STORE_RELEASE,
+                dlimit,
+                tlimit,
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        fetchMetadata();
+                    }
+                },
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                        intent.addCategory(Intent.CATEGORY_OPENABLE);
+                        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                        intent.setType("*/*");
+                        startActivityForResult(Helper.getChooser(getContext(), intent), REQUEST_SEND);
+                    }
+                },
+                new DialogInsertLinkView.OnLimitChangedListener() {
+                    @Override
+                    public void onChanged(int progress) {
+                        prefs.edit().putInt("send_dlimit", progress).apply();
+                    }
+                },
+                new DialogInsertLinkView.OnLimitChangedListener() {
+                    @Override
+                    public void onChanged(int progress) {
+                        prefs.edit().putInt("send_tlimit", progress).apply();
+                    }
+                }
+        );
 
         return new AlertDialog.Builder(context)
-                .setView(view)
+                .setView(view.getComposeView())
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        args.putString("link", etLink.getText().toString());
-                        args.putBoolean("image", cbImage.isChecked());
-                        args.putString("title", etTitle.getText().toString());
+                        args.putString("link", view.getLink());
+                        args.putBoolean("image", view.isImage());
+                        args.putString("title", view.getTitle());
                         sendResult(RESULT_OK);
                     }
                 })
                 .setNegativeButton(android.R.string.cancel, null)
-                //.setNeutralButton(R.string.title_reset, new DialogInterface.OnClickListener() {
-                //    @Override
-                //    public void onClick(DialogInterface dialog, int which) {
-                //        sendResult(RESULT_OK);
-                //    }
-                //})
                 .create();
+    }
+
+    private void fetchMetadata() {
+        if (view == null)
+            return;
+
+        Bundle args = new Bundle();
+        args.putString("url", view.getLink());
+
+        new SimpleTask<OpenGraph>() {
+            @Override
+            protected void onPreExecute(Bundle args) {
+                if (view != null)
+                    view.setLoadingMetadata(true);
+            }
+
+            @Override
+            protected void onPostExecute(Bundle args) {
+                if (view != null)
+                    view.setLoadingMetadata(false);
+            }
+
+            @Override
+            protected OpenGraph onExecute(Context context, Bundle args) throws Throwable {
+                String url = args.getString("url");
+                URL base = new URL(url);
+
+                OpenGraph og = new OpenGraph();
+
+                HttpsURLConnection connection = (HttpsURLConnection) base.openConnection();
+                connection.setRequestMethod("GET");
+                connection.setReadTimeout(METADATA_READ_TIMEOUT);
+                connection.setConnectTimeout(METADATA_CONNECT_TIMEOUT);
+                connection.setInstanceFollowRedirects(true);
+                ConnectionHelper.setUserAgent(context, connection);
+                connection.connect();
+
+                try {
+                    int status = connection.getResponseCode();
+                    if (status != HttpsURLConnection.HTTP_OK) {
+                        String error = "Error " + status + ": " + connection.getResponseMessage();
+                        try {
+                            InputStream is = connection.getErrorStream();
+                            if (is != null)
+                                error += "\n" + Helper.readStream(is);
+                        } catch (Throwable ex) {
+                            Log.w(ex);
+                        }
+                        throw new IOException(error);
+                    }
+
+                    // <title>...
+                    // <meta name="description" content="...
+                    // https://ogp.me/
+                    Document doc = JsoupEx.parse(connection.getInputStream(), StandardCharsets.UTF_8.name(), url);
+
+                    Element ogTitle = doc.select("meta[property=og:title]").first();
+                    if (ogTitle != null)
+                        og.title = ogTitle.attr("content");
+
+                    // Fallback
+                    if (TextUtils.isEmpty(og.title)) {
+                        Element title = doc.select("title").first();
+                        if (title != null)
+                            og.title = title.text();
+                    }
+
+                    Element ogDescription = doc.select("meta[property=og:description]").first();
+                    if (ogDescription != null)
+                        og.description = ogDescription.attr("content");
+
+                    // Fallback
+                    if (TextUtils.isEmpty(og.description)) {
+                        Element description = doc.select("meta[name=description]").first();
+                        if (description != null)
+                            og.description = description.attr("content");
+                    }
+
+                    Element ogSiteName = doc.select("meta[property=og:site_name]").first();
+                    if (ogSiteName != null)
+                        og.site_name = ogSiteName.attr("content");
+
+                    Element ogImage = doc.select("meta[property=og:image]").first();
+                    if (ogImage != null)
+                        og.image = ogImage.attr("content");
+
+                    Element ogUrl = doc.select("meta[property=og:url]").first();
+                    if (ogUrl != null)
+                        og.url = ogUrl.attr("content");
+
+                    return og;
+                } finally {
+                    connection.disconnect();
+                }
+            }
+
+            @Override
+            protected void onExecuted(Bundle args, OpenGraph og) {
+                if (og == null || view == null)
+                    return;
+
+                // Canonical URL
+                if (!TextUtils.isEmpty(og.url))
+                    view.setLink(og.url);
+
+                // Link title
+                String text = og.title;
+                if (TextUtils.isEmpty(text))
+                    text = og.description;
+                if (TextUtils.isEmpty(text))
+                    text = og.site_name;
+
+                if (TextUtils.isEmpty(text))
+                    view.setTitle(null);
+                else
+                    view.setTitle(text.replaceAll("\\s+", " "));
+            }
+
+            @Override
+            protected void onException(Bundle args, Throwable ex) {
+                Log.unexpectedError(getParentFragmentManager(), ex, !(ex instanceof IOException));
+            }
+        }.execute(FragmentDialogInsertLink.this, args, "link:meta");
     }
 
     @Override
@@ -391,8 +301,8 @@ public class FragmentDialogInsertLink extends FragmentDialogBase {
     }
 
     private void onSend(Uri uri) {
-        int dlimit = sbDLimit.getProgress() + 1;
-        int tlimit = sbTLimit.getProgress() + 1;
+        int dlimit = (view == null ? 0 : view.getDLimit()) + 1;
+        int tlimit = (view == null ? 0 : view.getTLimit()) + 1;
 
         if (tlimit >= 24)
             tlimit = (tlimit - 24 + 1) * 24;
@@ -405,19 +315,16 @@ public class FragmentDialogInsertLink extends FragmentDialogBase {
         new SimpleTask<String>() {
             @Override
             protected void onPreExecute(Bundle args) {
-                btnUpload.setEnabled(false);
-                sbDLimit.setEnabled(false);
-                sbTLimit.setEnabled(false);
-                pbUpload.setProgress(0);
-                pbUpload.setVisibility(View.VISIBLE);
+                if (view != null) {
+                    view.setUploading(true);
+                    view.setUploadProgress(0);
+                }
             }
 
             @Override
             protected void onPostExecute(Bundle args) {
-                btnUpload.setEnabled(true);
-                sbDLimit.setEnabled(true);
-                sbTLimit.setEnabled(true);
-                pbUpload.setVisibility(View.GONE);
+                if (view != null)
+                    view.setUploading(false);
             }
 
             @Override
@@ -460,7 +367,7 @@ public class FragmentDialogInsertLink extends FragmentDialogBase {
 
                         @Override
                         public boolean isRunning() {
-                            return (pbUpload != null);
+                            return (isAdded() && view != null);
                         }
                     });
                 }
@@ -470,14 +377,16 @@ public class FragmentDialogInsertLink extends FragmentDialogBase {
             protected void onProgress(CharSequence status, Bundle data) {
                 int progress = data.getInt("progress");
                 Log.i("Send progress=" + progress);
-                if (pbUpload != null)
-                    pbUpload.setProgress(progress);
+                if (view != null)
+                    view.setUploadProgress(progress);
             }
 
             @Override
             protected void onExecuted(Bundle args, String link) {
-                etLink.setText(link);
-                etTitle.setText(args.getString("title"));
+                if (view != null) {
+                    view.setLink(link);
+                    view.setTitle(args.getString("title"));
+                }
             }
 
             @Override
