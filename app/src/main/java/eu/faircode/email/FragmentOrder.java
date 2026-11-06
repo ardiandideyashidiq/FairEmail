@@ -21,20 +21,20 @@ package eu.faircode.email;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.constraintlayout.widget.Group;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,8 +44,6 @@ public class FragmentOrder extends FragmentBase {
 
     private RecyclerView rvOrder;
     private ContentLoadingProgressBar pbWait;
-    private Group grpReady;
-
     private boolean dirty = false;
     private AdapterOrder adapter;
 
@@ -66,12 +64,18 @@ public class FragmentOrder extends FragmentBase {
         setSubtitle(title);
         setHasOptionsMenu(true);
 
-        View view = inflater.inflate(R.layout.fragment_order, container, false);
+        FrameLayout view = new FrameLayout(getContext());
+        rvOrder = new FixedRecyclerView(getContext());
+        view.addView(rvOrder, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // Get controls
-        rvOrder = view.findViewById(R.id.rvOrder);
-        pbWait = view.findViewById(R.id.pbWait);
-        grpReady = view.findViewById(R.id.grpReady);
+        pbWait = new ContentLoadingProgressBar(getContext());
+        FrameLayout.LayoutParams lpPb = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lpPb.gravity = Gravity.CENTER;
+        view.addView(pbWait, lpPb);
 
         // Wire controls
         rvOrder.setHasFixedSize(true);
@@ -83,7 +87,7 @@ public class FragmentOrder extends FragmentBase {
         new ItemTouchHelper(touchHelper).attachToRecyclerView(rvOrder);
 
         // Initialize
-        grpReady.setVisibility(View.GONE);
+        rvOrder.setVisibility(View.GONE);
         pbWait.setVisibility(View.VISIBLE);
 
         return view;
@@ -111,7 +115,7 @@ public class FragmentOrder extends FragmentBase {
                     adapter.set((List<EntityOrder>) (List<?>) accounts);
 
                     pbWait.setVisibility(View.GONE);
-                    grpReady.setVisibility(View.VISIBLE);
+                    rvOrder.setVisibility(View.VISIBLE);
                 }
 
                 @Override
@@ -137,7 +141,7 @@ public class FragmentOrder extends FragmentBase {
                     adapter.set((List<EntityOrder>) (List<?>) folders);
 
                     pbWait.setVisibility(View.GONE);
-                    grpReady.setVisibility(View.VISIBLE);
+                    rvOrder.setVisibility(View.VISIBLE);
                 }
 
                 @Override
