@@ -31,7 +31,9 @@ import android.provider.Settings;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import androidx.appcompat.app.AlertDialog;
@@ -480,7 +482,11 @@ public class ActivityMain extends ActivityBase implements FragmentManager.OnBack
                 setTheme(R.style.AppThemeBlueOrangeLight);
 
             super.onCreate(savedInstanceState);
-            setContentView(R.layout.activity_main);
+            FrameLayout frame = new FrameLayout(this);
+            frame.setId(R.id.content_frame);
+            setContentView(frame, new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
 
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
             getSupportFragmentManager().addOnBackStackChangedListener(this);
