@@ -33,6 +33,9 @@ import android.view.View;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.view.Gravity;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 import androidx.constraintlayout.widget.Group;
@@ -56,7 +59,6 @@ import java.util.Locale;
 public class ActivityAMP extends ActivityBase {
     private WebView wvAmp;
     private ContentLoadingProgressBar pbWait;
-    private Group grpReady;
 
     private boolean force_light = false;
 
@@ -71,14 +73,22 @@ public class ActivityAMP extends ActivityBase {
         if (savedInstanceState != null)
             force_light = savedInstanceState.getBoolean("fair:force_light");
 
-        View view = LayoutInflater.from(this).inflate(R.layout.activity_amp, null);
-        setContentView(view);
+        FrameLayout layout = new FrameLayout(this);
+        wvAmp = new WebView(this);
+        layout.addView(wvAmp, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+
+        pbWait = new ContentLoadingProgressBar(this);
+        FrameLayout.LayoutParams lpPb = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lpPb.gravity = Gravity.CENTER;
+        layout.addView(pbWait, lpPb);
+
+        setContentView(layout);
 
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-
-        wvAmp = findViewById(R.id.wvAmp);
-        pbWait = findViewById(R.id.pbWait);
-        grpReady = findViewById(R.id.grpReady);
 
         wvAmp.clearCache(true);
 
@@ -138,7 +148,7 @@ public class ActivityAMP extends ActivityBase {
         });
 
         // Initialize
-        grpReady.setVisibility(View.GONE);
+        wvAmp.setVisibility(View.GONE);
 
         load();
     }
@@ -286,7 +296,7 @@ public class ActivityAMP extends ActivityBase {
                 getSupportActionBar().setSubtitle(args.getString("subject"));
 
                 wvAmp.loadDataWithBaseURL(null, amp, "text/html", StandardCharsets.UTF_8.name(), null);
-                grpReady.setVisibility(View.VISIBLE);
+                wvAmp.setVisibility(View.VISIBLE);
             }
 
             @Override
