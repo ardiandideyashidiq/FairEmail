@@ -24,23 +24,27 @@ fun CheckboxItem(
     text: String,
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) }
+            .then(
+                if (enabled) Modifier.clickable { onCheckedChange(!checked) } else Modifier
+            )
             .padding(vertical = 4.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
             checked = checked,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = if (enabled) onCheckedChange else null,
+            enabled = enabled
         )
         Text(
             text = text,
             fontSize = 14.sp,
-            color = MaterialTheme.colorScheme.onSurface,
+            color = if (enabled) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
             modifier = Modifier.padding(start = 8.dp)
         )
     }
@@ -66,6 +70,7 @@ object CheckboxItemBinder {
         composeView: ComposeView,
         text: String,
         checked: Boolean,
+        enabled: Boolean,
         listener: OnCheckboxChangedListener
     ) {
         composeView.setContent {
@@ -74,6 +79,7 @@ object CheckboxItemBinder {
                 CheckboxItem(
                     text = text,
                     checked = state.value,
+                    enabled = enabled,
                     onCheckedChange = { newValue ->
                         state.value = newValue
                         listener.onChanged(newValue)
@@ -81,6 +87,16 @@ object CheckboxItemBinder {
                 )
             }
         }
+    }
+
+    @JvmStatic
+    fun bind(
+        composeView: ComposeView,
+        text: String,
+        checked: Boolean,
+        listener: OnCheckboxChangedListener
+    ) {
+        bind(composeView, text, checked, true, listener)
     }
 
     fun interface OnCheckboxChangedListener {

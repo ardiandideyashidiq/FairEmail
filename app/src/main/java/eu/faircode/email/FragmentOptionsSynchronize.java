@@ -766,64 +766,58 @@ public class FragmentOptionsSynchronize extends FragmentBase implements SharedPr
 
         private List<EntityAccount> items = new ArrayList<>();
 
-        public class ViewHolder extends RecyclerView.ViewHolder implements CompoundButton.OnCheckedChangeListener {
-            private CheckBox cbExempted;
+        public class ViewHolder extends RecyclerView.ViewHolder {
+            private ComposeView composeView;
 
-            ViewHolder(View itemView) {
+            ViewHolder(ComposeView itemView) {
                 super(itemView);
-                cbExempted = itemView.findViewById(R.id.cbExempted);
-            }
-
-            private void wire() {
-                cbExempted.setOnCheckedChangeListener(this);
-            }
-
-            private void unwire() {
-                cbExempted.setOnCheckedChangeListener(null);
+                composeView = itemView;
             }
 
             private void bindTo(EntityAccount account) {
-                cbExempted.setEnabled(!account.ondemand && account.protocol == EntityAccount.TYPE_IMAP);
-                cbExempted.setChecked(account.poll_exempted);
-                cbExempted.setText(account.name);
-            }
+                boolean enabled = !account.ondemand && account.protocol == EntityAccount.TYPE_IMAP;
+                CheckboxItemBinder.bind(
+                    composeView,
+                    account.name,
+                    account.poll_exempted,
+                    enabled,
+                    isChecked -> {
+                        int pos = getAdapterPosition();
+                        if (pos == RecyclerView.NO_POSITION)
+                            return;
 
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                int pos = getAdapterPosition();
-                if (pos == RecyclerView.NO_POSITION)
-                    return;
+                        EntityAccount acc = items.get(pos);
 
-                EntityAccount account = items.get(pos);
+                        Bundle args = new Bundle();
+                        args.putLong("id", acc.id);
+                        args.putBoolean("exempted", isChecked);
 
-                Bundle args = new Bundle();
-                args.putLong("id", account.id);
-                args.putBoolean("exempted", isChecked);
+                        new SimpleTask<Void>() {
+                            @Override
+                            protected Void onExecute(Context context, Bundle args) {
+                                long id = args.getLong("id");
+                                boolean exempted = args.getBoolean("exempted");
 
-                new SimpleTask<Void>() {
-                    @Override
-                    protected Void onExecute(Context context, Bundle args) {
-                        long id = args.getLong("id");
-                        boolean exempted = args.getBoolean("exempted");
+                                if (exempted) {
+                                    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+                                    prefs.edit().remove("auto_optimize").apply();
+                                }
 
-                        if (exempted) {
-                            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-                            prefs.edit().remove("auto_optimize").apply();
-                        }
+                                DB db = DB.getInstance(context);
+                                db.account().setAccountPollExempted(id, exempted);
 
-                        DB db = DB.getInstance(context);
-                        db.account().setAccountPollExempted(id, exempted);
+                                ServiceSynchronize.eval(context, "exempted");
 
-                        ServiceSynchronize.eval(context, "exempted");
+                                return null;
+                            }
 
-                        return null;
+                            @Override
+                            protected void onException(Bundle args, Throwable ex) {
+                                Log.e(ex);
+                            }
+                        }.execute(context, owner, args, "set:exempted");
                     }
-
-                    @Override
-                    protected void onException(Bundle args, Throwable ex) {
-                        Log.e(ex);
-                    }
-                }.execute(context, owner, args, "set:exempted");
+                );
             }
         }
 
@@ -897,15 +891,13 @@ public class FragmentOptionsSynchronize extends FragmentBase implements SharedPr
         @Override
         @NonNull
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new ViewHolder(inflater.inflate(R.layout.item_account_exempted, parent, false));
+            return new ViewHolder(CheckboxItemBinder.createComposeView(parent));
         }
 
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            holder.unwire();
             EntityAccount account = items.get(position);
             holder.bindTo(account);
-            holder.wire();
         }
     }
 
