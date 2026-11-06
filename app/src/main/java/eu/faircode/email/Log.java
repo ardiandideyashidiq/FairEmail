@@ -1745,27 +1745,14 @@ public class Log {
             final int faq = args.getInt("faq");
 
             final Context context = getContext();
-            LayoutInflater inflater = LayoutInflater.from(context);
-            View dview = inflater.inflate(R.layout.dialog_unexpected, null);
-            TextView tvCaption = dview.findViewById(R.id.tvCaption);
-            TextView tvError = dview.findViewById(R.id.tvError);
-            Button btnHelp = dview.findViewById(R.id.btnHelp);
-
-            tvCaption.setText(report ? R.string.title_unexpected_error : R.string.title_setup_error);
-
+            String caption = context.getString(report ? R.string.title_unexpected_error : R.string.title_setup_error);
             String message = Log.formatThrowable(ex, false);
-            tvError.setText(message);
+            Runnable onHelp = (faq > 0 ? () -> Helper.viewFAQ(context, faq) : null);
 
-            btnHelp.setVisibility(faq > 0 ? View.VISIBLE : View.GONE);
-            btnHelp.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Helper.viewFAQ(v.getContext(), faq);
-                }
-            });
+            DialogUnexpectedView errorView = new DialogUnexpectedView(context, caption, message, onHelp);
 
             AlertDialog.Builder builder = new AlertDialog.Builder(context)
-                    .setView(dview)
+                    .setView(errorView.getComposeView())
                     .setNegativeButton(android.R.string.cancel, null)
                     .setPositiveButton(R.string.menu_faq, new DialogInterface.OnClickListener() {
                         @Override

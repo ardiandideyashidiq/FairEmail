@@ -366,16 +366,15 @@ public class ActivityMain extends ActivityBase implements FragmentManager.OnBack
                 protected void onException(Bundle args, Throwable ex) {
                     // Log.unexpectedError() won't work here
                     Log.e(ex);
-
-                    LayoutInflater inflater = LayoutInflater.from(ActivityMain.this);
-                    View dview = inflater.inflate(R.layout.dialog_unexpected, null);
-                    TextView tvError = dview.findViewById(R.id.tvError);
-
                     String message = Log.formatThrowable(ex, false);
-                    tvError.setText(message);
+                    DialogUnexpectedView errorView = new DialogUnexpectedView(
+                            ActivityMain.this,
+                            getString(R.string.title_unexpected_error),
+                            message
+                    );
 
                     new AlertDialog.Builder(ActivityMain.this)
-                            .setView(dview)
+                            .setView(errorView.getComposeView())
                             .setNegativeButton(android.R.string.cancel, null)
                             .setNeutralButton(R.string.menu_faq, new DialogInterface.OnClickListener() {
                                 @Override
