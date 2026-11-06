@@ -24,22 +24,12 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
-import android.content.res.ColorStateList;
-import android.graphics.drawable.Drawable;
-import android.os.Build;
 import android.os.Bundle;
 import android.view.HapticFeedbackConstants;
-import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
-import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.core.content.ContextCompat;
-import androidx.core.widget.TextViewCompat;
 import androidx.preference.PreferenceManager;
 
 import java.text.Collator;
@@ -59,20 +49,10 @@ public class FragmentMoveAsk extends FragmentDialogBase {
         ArrayList<FragmentMessages.MessageTarget> result = getArguments().getParcelableArrayList("result");
 
         final Context context = getContext();
-        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_ask_move, null);
-        TextView tvMessages = dview.findViewById(R.id.tvMessages);
-        TextView tvSourceFolders = dview.findViewById(R.id.tvSourceFolders);
-        TextView tvTargetFolders = dview.findViewById(R.id.tvTargetFolders);
-        CheckBox cbNotAgain = dview.findViewById(R.id.cbNotAgain);
-        TextView tvJunkLearn = dview.findViewById(R.id.tvJunkLearn);
 
         String question = context.getResources()
                 .getQuantityString(R.plurals.title_moving_messages,
                         result.size(), result.size());
-
-        tvMessages.setText(question);
-        tvSourceFolders.setText(getNames(result, false));
-        tvTargetFolders.setText(getNames(result, true));
 
         List<String> sources = new ArrayList<>();
         List<String> targets = new ArrayList<>();
@@ -94,50 +74,39 @@ public class FragmentMoveAsk extends FragmentDialogBase {
                 junk = true;
         }
 
-        Drawable source = null;
-        if (sources.size() == 1) {
-            source = ContextCompat.getDrawable(context, EntityFolder.getIcon(sources.get(0)));
-            if (source != null)
-                source.setBounds(0, 0, source.getIntrinsicWidth(), source.getIntrinsicHeight());
-            if (sourceColor == null)
-                sourceColor = EntityFolder.getDefaultColor(sources.get(0), context);
-        } else {
-            source = ContextCompat.getDrawable(context, R.drawable.twotone_folders_24);
-            source.setBounds(0, 0, source.getIntrinsicWidth(), source.getIntrinsicHeight());
+        int sourceIcon = sources.size() == 1 ? EntityFolder.getIcon(sources.get(0)) : R.drawable.twotone_folders_24;
+        if (sources.size() == 1 && sourceColor == null)
+            sourceColor = EntityFolder.getDefaultColor(sources.get(0), context);
+        else if (sources.size() != 1)
             sourceColor = null;
-        }
 
-        Drawable target = null;
-        if (targets.size() == 1) {
-            target = ContextCompat.getDrawable(context, EntityFolder.getIcon(targets.get(0)));
-            if (target != null)
-                target.setBounds(0, 0, target.getIntrinsicWidth(), target.getIntrinsicHeight());
-            if (targetColor == null)
-                targetColor = EntityFolder.getDefaultColor(targets.get(0), context);
-        } else
+        int targetIcon = targets.size() == 1 ? EntityFolder.getIcon(targets.get(0)) : R.drawable.twotone_folders_24;
+        if (targets.size() == 1 && targetColor == null)
+            targetColor = EntityFolder.getDefaultColor(targets.get(0), context);
+        else if (targets.size() != 1)
             targetColor = null;
 
-        tvSourceFolders.setCompoundDrawablesRelative(source, null, null, null);
-        tvTargetFolders.setCompoundDrawablesRelative(target, null, null, null);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (sourceColor != null)
-                TextViewCompat.setCompoundDrawableTintList(tvSourceFolders, ColorStateList.valueOf(sourceColor));
-            if (targetColor != null)
-                TextViewCompat.setCompoundDrawableTintList(tvTargetFolders, ColorStateList.valueOf(targetColor));
-        }
-
-        if (notagain != null)
-            cbNotAgain.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(buttonView.getContext());
-                    prefs.edit().putBoolean(notagain, isChecked).apply();
+        DialogAskMoveView dialogView = new DialogAskMoveView(
+                context,
+                question,
+                getNames(result, false),
+                getNames(result, true),
+                sourceIcon,
+                targetIcon,
+                sourceColor,
+                targetColor,
+                notagain != null,
+                junk,
+                isChecked -> {
+                    if (notagain != null) {
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+                        prefs.edit().putBoolean(notagain, isChecked).apply();
+                    }
+                    return null;
                 }
-            });
+        );
 
-        tvJunkLearn.setVisibility(junk ? View.VISIBLE : View.GONE);
-
+        View dview = dialogView.getComposeView();
         return new AlertDialog.Builder(context)
                 .setView(dview)
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
