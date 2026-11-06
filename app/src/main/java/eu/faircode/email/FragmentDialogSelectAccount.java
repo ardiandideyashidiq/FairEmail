@@ -30,6 +30,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import androidx.compose.ui.platform.ComposeView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -125,40 +126,29 @@ public class FragmentDialogSelectAccount extends FragmentDialogBase {
         private List<EntityAccount> items;
         private IListener listener;
 
-        public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
-            private View vwColor;
-            private TextView tv;
+        public class ViewHolder extends RecyclerView.ViewHolder {
+            private ComposeView composeView;
 
-            ViewHolder(View itemView) {
+            ViewHolder(ComposeView itemView) {
                 super(itemView);
-                vwColor = itemView.findViewById(R.id.vwColor);
-                tv = itemView.findViewById(android.R.id.text1);
-            }
-
-            private void wire() {
-                itemView.setOnClickListener(this);
-            }
-
-            private void unwire() {
-                itemView.setOnClickListener(null);
+                composeView = itemView;
             }
 
             private void bindTo(EntityAccount account) {
-                int vpad = (getItemCount() > 10 ? dp6 : dp12);
-                tv.setPadding(0, vpad, 0, vpad);
-
-                vwColor.setBackgroundColor(account.color == null ? Color.TRANSPARENT : account.color);
-                tv.setText(account.name);
-            }
-
-            @Override
-            public void onClick(View v) {
-                int pos = getAdapterPosition();
-                if (pos == RecyclerView.NO_POSITION)
-                    return;
-
-                EntityAccount account = items.get(pos);
-                listener.onSelected(account);
+                boolean isCompact = (getItemCount() > 10);
+                AccountSelectItemBinder.bind(
+                    composeView,
+                    account.name,
+                    account.color,
+                    isCompact,
+                    () -> {
+                        int pos = getAdapterPosition();
+                        if (pos != RecyclerView.NO_POSITION) {
+                            EntityAccount acc = items.get(pos);
+                            listener.onSelected(acc);
+                        }
+                    }
+                );
             }
         }
 
@@ -186,15 +176,13 @@ public class FragmentDialogSelectAccount extends FragmentDialogBase {
         @Override
         @NonNull
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new ViewHolder(inflater.inflate(R.layout.item_account_select, parent, false));
+            return new ViewHolder(AccountSelectItemBinder.createComposeView(parent));
         }
 
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            holder.unwire();
             EntityAccount account = items.get(position);
             holder.bindTo(account);
-            holder.wire();
         }
 
         public interface IListener {

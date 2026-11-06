@@ -31,6 +31,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import androidx.compose.ui.platform.ComposeView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -137,43 +138,33 @@ public class FragmentDialogSelectUnifiedFolder extends FragmentDialogBase {
         private List<TupleFolderEx> items;
         private IListener listener;
 
-        public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
-            private View vwColor;
-            private TextView tv;
+        public class ViewHolder extends RecyclerView.ViewHolder {
+            private ComposeView composeView;
 
-            ViewHolder(View itemView) {
+            ViewHolder(ComposeView itemView) {
                 super(itemView);
-                vwColor = itemView.findViewById(R.id.vwColor);
-                tv = itemView.findViewById(android.R.id.text1);
-            }
-
-            private void wire() {
-                itemView.setOnClickListener(this);
-            }
-
-            private void unwire() {
-                itemView.setOnClickListener(null);
+                composeView = itemView;
             }
 
             private void bindTo(TupleFolderEx folder) {
-                int vpad = (getItemCount() > 10 ? dp6 : dp12);
-                tv.setPadding(0, vpad, 0, vpad);
+                boolean isCompact = (getItemCount() > 10);
+                String displayName = (folder.accountName == null
+                        ? folder.getDisplayName(context)
+                        : folder.accountName + "/" + folder.getDisplayName(context));
 
-                vwColor.setBackgroundColor(folder.color == null ? Color.TRANSPARENT : folder.color);
-                if (folder.accountName == null)
-                    tv.setText(folder.getDisplayName(context));
-                else
-                    tv.setText(folder.accountName + "/" + folder.getDisplayName(context));
-            }
-
-            @Override
-            public void onClick(View v) {
-                int pos = getAdapterPosition();
-                if (pos == RecyclerView.NO_POSITION)
-                    return;
-
-                TupleFolderEx folder = items.get(pos);
-                listener.onSelected(folder);
+                AccountSelectItemBinder.bind(
+                    composeView,
+                    displayName,
+                    folder.color,
+                    isCompact,
+                    () -> {
+                        int pos = getAdapterPosition();
+                        if (pos != RecyclerView.NO_POSITION) {
+                            TupleFolderEx f = items.get(pos);
+                            listener.onSelected(f);
+                        }
+                    }
+                );
             }
         }
 
@@ -201,15 +192,13 @@ public class FragmentDialogSelectUnifiedFolder extends FragmentDialogBase {
         @Override
         @NonNull
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new ViewHolder(inflater.inflate(R.layout.item_account_select, parent, false));
+            return new ViewHolder(AccountSelectItemBinder.createComposeView(parent));
         }
 
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            holder.unwire();
             TupleFolderEx folder = items.get(position);
             holder.bindTo(folder);
-            holder.wire();
         }
 
         public interface IListener {
