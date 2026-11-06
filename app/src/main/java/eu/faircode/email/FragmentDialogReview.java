@@ -20,6 +20,7 @@ package eu.faircode.email;
 */
 
 import android.app.Dialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.graphics.Paint;
@@ -39,18 +40,25 @@ public class FragmentDialogReview extends FragmentDialogBase {
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        View dview = LayoutInflater.from(getContext()).inflate(R.layout.dialog_review, null);
-        TextView tvHelp = dview.findViewById(R.id.tvHelp);
+        final Context context = getContext();
+        final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
-        final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+        final DialogReviewView reviewView = new DialogReviewView(context, new Runnable() {
+            @Override
+            public void run() {
+                dismiss();
+                prefs.edit().putLong("review_later", new Date().getTime()).apply();
+                startActivity(Helper.getIntentIssue(context, "Review:issue"));
+            }
+        });
 
-        Dialog dialog = new AlertDialog.Builder(getContext())
-                .setView(dview)
+        return new AlertDialog.Builder(context)
+                .setView(reviewView.getComposeView())
                 .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         prefs.edit().putBoolean("review_asked", true).apply();
-                        startActivity(Helper.getIntentRate(getContext()));
+                        startActivity(Helper.getIntentRate(context));
                     }
                 })
                 .setNegativeButton(android.R.string.no, new DialogInterface.OnClickListener() {
@@ -66,18 +74,6 @@ public class FragmentDialogReview extends FragmentDialogBase {
                     }
                 })
                 .create();
-
-        tvHelp.setPaintFlags(tvHelp.getPaintFlags() | Paint.UNDERLINE_TEXT_FLAG);
-        tvHelp.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dismiss();
-                prefs.edit().putLong("review_later", new Date().getTime()).apply();
-                startActivity(Helper.getIntentIssue(v.getContext(), "Review:issue"));
-            }
-        });
-
-        return dialog;
     }
 
     @Override
