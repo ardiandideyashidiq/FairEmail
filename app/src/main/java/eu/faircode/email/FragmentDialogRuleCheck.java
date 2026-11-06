@@ -23,18 +23,14 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
 
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -51,22 +47,9 @@ public class FragmentDialogRuleCheck extends FragmentDialogBase {
         String action = getArguments().getString("action");
 
         final Context context = getContext();
-        final View dview = LayoutInflater.from(context).inflate(R.layout.dialog_rule_match, null);
-        final TextView tvNoMessages = dview.findViewById(R.id.tvNoMessages);
-        final RecyclerView rvMessage = dview.findViewById(R.id.rvMessage);
-        final Button btnExecute = dview.findViewById(R.id.btnExecute);
-        final ContentLoadingProgressBar pbWait = dview.findViewById(R.id.pbWait);
 
-        rvMessage.setHasFixedSize(false);
-        LinearLayoutManager llm = new LinearLayoutManager(context);
-        rvMessage.setLayoutManager(llm);
-
-        final AdapterRuleMatch adapter = new AdapterRuleMatch(context, getViewLifecycleOwner());
-        rvMessage.setAdapter(adapter);
-
-        tvNoMessages.setVisibility(View.GONE);
-        rvMessage.setVisibility(View.GONE);
-        btnExecute.setVisibility(View.GONE);
+        final DateFormat D = new SimpleDateFormat("E");
+        final DateFormat DTF = Helper.getDateTimeInstance(context, SimpleDateFormat.SHORT, SimpleDateFormat.SHORT);
 
         final Bundle args = new Bundle();
         args.putLong("folder", folder);
@@ -75,9 +58,9 @@ public class FragmentDialogRuleCheck extends FragmentDialogBase {
         args.putString("condition", condition);
         args.putString("action", action);
 
-        btnExecute.setOnClickListener(new View.OnClickListener() {
+        final DialogRuleMatchView ruleMatchView = new DialogRuleMatchView(context, new Runnable() {
             @Override
-            public void onClick(View v) {
+            public void run() {
                 if (!ActivityBilling.isPro(context)) {
                     startActivity(new Intent(context, ActivityBilling.class));
                     return;
@@ -153,12 +136,7 @@ public class FragmentDialogRuleCheck extends FragmentDialogBase {
         new SimpleTask<List<EntityMessage>>() {
             @Override
             protected void onPreExecute(Bundle args) {
-                pbWait.setVisibility(View.VISIBLE);
-            }
-
-            @Override
-            protected void onPostExecute(Bundle args) {
-                pbWait.setVisibility(View.GONE);
+                ruleMatchView.setLoading(true);
             }
 
             @Override
@@ -192,20 +170,18 @@ public class FragmentDialogRuleCheck extends FragmentDialogBase {
 
             @Override
             protected void onExecuted(Bundle args, List<EntityMessage> messages) {
-                adapter.set(messages);
-
-                if (messages.size() > 0) {
-                    rvMessage.setVisibility(View.VISIBLE);
-                    btnExecute.setVisibility(View.VISIBLE);
-                } else
-                    tvNoMessages.setVisibility(View.VISIBLE);
+                List<RuleMatchUiItem> items = new ArrayList<>();
+                for (EntityMessage message : messages) {
+                    String time = D.format(message.received) + " " + DTF.format(message.received);
+                    items.add(new RuleMatchUiItem(message.id, time, message.subject));
+                }
+                ruleMatchView.setMessages(items);
             }
 
             @Override
             protected void onException(Bundle args, Throwable ex) {
                 if (ex instanceof IllegalArgumentException) {
-                    tvNoMessages.setText(new ThrowableWrapper(ex).getSafeMessage());
-                    tvNoMessages.setVisibility(View.VISIBLE);
+                    ruleMatchView.setError(new ThrowableWrapper(ex).getSafeMessage());
                 } else
                     Log.unexpectedError(getParentFragmentManager(), ex, 71);
             }
@@ -214,7 +190,7 @@ public class FragmentDialogRuleCheck extends FragmentDialogBase {
         return new AlertDialog.Builder(context)
                 .setIcon(R.drawable.baseline_mail_outline_24)
                 .setTitle(R.string.title_rule_matched)
-                .setView(dview)
+                .setView(ruleMatchView.getComposeView())
                 .setNegativeButton(android.R.string.cancel, null)
                 .create();
     }
