@@ -32,7 +32,9 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.Gravity;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -51,7 +53,6 @@ import java.util.Locale;
 public class FragmentLogs extends FragmentBase {
     private RecyclerView rvLog;
     private ContentLoadingProgressBar pbWait;
-    private Group grpReady;
 
     private Long account = null;
     private Long folder = null;
@@ -89,13 +90,18 @@ public class FragmentLogs extends FragmentBase {
         setSubtitle(R.string.title_log);
         setHasOptionsMenu(true);
 
-        View view = inflater.inflate(R.layout.fragment_logs, container, false);
+        FrameLayout view = new FrameLayout(getContext());
+        rvLog = new FixedRecyclerView(getContext());
+        view.addView(rvLog, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // Get controls
-        rvLog = view.findViewById(R.id.rvLog);
-        pbWait = view.findViewById(R.id.pbWait);
-        grpReady = view.findViewById(R.id.grpReady);
-
+        pbWait = new ContentLoadingProgressBar(getContext());
+        FrameLayout.LayoutParams lpPb = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        lpPb.gravity = Gravity.CENTER;
+        view.addView(pbWait, lpPb);
         // Wire controls
 
         rvLog.setHasFixedSize(true);
@@ -117,7 +123,7 @@ public class FragmentLogs extends FragmentBase {
         });
 
         // Initialize
-        grpReady.setVisibility(View.GONE);
+        rvLog.setVisibility(View.GONE);
         pbWait.setVisibility(View.VISIBLE);
 
         return view;
@@ -146,7 +152,7 @@ public class FragmentLogs extends FragmentBase {
                 });
 
                 pbWait.setVisibility(View.GONE);
-                grpReady.setVisibility(View.VISIBLE);
+                rvLog.setVisibility(View.VISIBLE);
             }
         });
     }
