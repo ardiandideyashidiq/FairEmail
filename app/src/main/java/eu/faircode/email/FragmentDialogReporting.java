@@ -36,18 +36,13 @@ public class FragmentDialogReporting extends FragmentDialogBase {
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        View dview = LayoutInflater.from(getContext()).inflate(R.layout.dialog_error_reporting, null);
-        Button btnInfo = dview.findViewById(R.id.btnInfo);
-
-        btnInfo.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Helper.viewFAQ(v.getContext(), 104);
-            }
-        });
+        final DialogErrorReportingView reportingView = new DialogErrorReportingView(
+                getContext(),
+                () -> Helper.viewFAQ(getContext(), 104)
+        );
 
         return new AlertDialog.Builder(getContext())
-                .setView(dview)
+                .setView(reportingView.getComposeView())
                 .setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
