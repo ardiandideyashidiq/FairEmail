@@ -24,8 +24,7 @@ import android.graphics.Typeface;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
-
+import androidx.compose.ui.platform.ComposeView;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleObserver;
@@ -49,16 +48,11 @@ public class AdapterVirusTotal extends RecyclerView.Adapter<AdapterVirusTotal.Vi
     private List<VirusTotal.ScanResult> items = new ArrayList<>();
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        private View view;
-        private TextView tvName;
-        private TextView tvCategory;
+        private ComposeView composeView;
 
-        ViewHolder(View itemView) {
+        ViewHolder(ComposeView itemView) {
             super(itemView);
-
-            view = itemView.findViewById(R.id.clItem);
-            tvName = itemView.findViewById(R.id.tvName);
-            tvCategory = itemView.findViewById(R.id.tvCategory);
+            composeView = itemView;
         }
 
         private void wire() {
@@ -69,10 +63,7 @@ public class AdapterVirusTotal extends RecyclerView.Adapter<AdapterVirusTotal.Vi
 
         private void bindTo(VirusTotal.ScanResult scan) {
             boolean malicious = "malicious".equals(scan.category);
-            tvName.setText(scan.name);
-            tvCategory.setText(scan.category);
-            tvCategory.setTextColor(malicious ? colorWarning : textColorSecondary);
-            tvCategory.setTypeface(malicious ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+            VirusTotalItemBinder.bind(composeView, scan.name, scan.category, malicious);
         }
     }
 
@@ -178,7 +169,7 @@ public class AdapterVirusTotal extends RecyclerView.Adapter<AdapterVirusTotal.Vi
     @Override
     @NonNull
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        return new ViewHolder(inflater.inflate(R.layout.item_virus_total, parent, false));
+        return new ViewHolder(VirusTotalItemBinder.createComposeView(parent));
     }
 
     @Override
