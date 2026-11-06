@@ -31,7 +31,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-
+import androidx.compose.ui.platform.ComposeView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -126,47 +126,33 @@ public class FragmentDialogSelectIdentity extends FragmentDialogBase {
         private List<TupleIdentityEx> items;
         private IListener listener;
 
-        public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
-            private View vwColor;
-            private TextView text1;
-            private TextView text2;
+        public class ViewHolder extends RecyclerView.ViewHolder {
+            private ComposeView composeView;
 
-            ViewHolder(View itemView) {
+            ViewHolder(ComposeView itemView) {
                 super(itemView);
-                vwColor = itemView.findViewById(R.id.vwColor);
-                text1 = itemView.findViewById(android.R.id.text1);
-                text2 = itemView.findViewById(android.R.id.text2);
-            }
-
-            private void wire() {
-                itemView.setOnClickListener(this);
-            }
-
-            private void unwire() {
-                itemView.setOnClickListener(null);
+                composeView = itemView;
             }
 
             private void bindTo(TupleIdentityEx identity) {
-                int vpad = (getItemCount() > 10 ? dp6 : dp12);
-                text1.setPadding(0, vpad, 0, 0);
-                text2.setPadding(0, 0, 0, vpad);
-
+                boolean isCompact = (getItemCount() > 10);
                 Integer color = (identity.color == null ? identity.accountColor : identity.color);
-                vwColor.setBackgroundColor(color == null ? Color.TRANSPARENT : color);
-
                 String name = identity.getDisplayName();
-                text1.setText(TextUtils.isEmpty(name) ? "-" : name);
-                text2.setText(identity.email);
-            }
 
-            @Override
-            public void onClick(View v) {
-                int pos = getAdapterPosition();
-                if (pos == RecyclerView.NO_POSITION)
-                    return;
-
-                TupleIdentityEx identity = items.get(pos);
-                listener.onSelected(identity);
+                IdentitySelectItemBinder.bind(
+                    composeView,
+                    TextUtils.isEmpty(name) ? "-" : name,
+                    identity.email,
+                    color,
+                    isCompact,
+                    () -> {
+                        int pos = getAdapterPosition();
+                        if (pos != RecyclerView.NO_POSITION) {
+                            TupleIdentityEx id = items.get(pos);
+                            listener.onSelected(id);
+                        }
+                    }
+                );
             }
         }
 
@@ -194,15 +180,13 @@ public class FragmentDialogSelectIdentity extends FragmentDialogBase {
         @Override
         @NonNull
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new ViewHolder(inflater.inflate(R.layout.item_identity_select, parent, false));
+            return new ViewHolder(IdentitySelectItemBinder.createComposeView(parent));
         }
 
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            holder.unwire();
             TupleIdentityEx identity = items.get(position);
             holder.bindTo(identity);
-            holder.wire();
         }
 
         public interface IListener {
