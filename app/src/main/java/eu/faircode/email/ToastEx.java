@@ -26,6 +26,7 @@ import android.view.ContextThemeWrapper;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -43,13 +44,21 @@ public class ToastEx extends Toast {
 
         Context ctx = getThemedContext(context);
 
-        LayoutInflater inflater = LayoutInflater.from(ctx);
-        View view = inflater.inflate(R.layout.toast, null);
+        LinearLayout view = new LinearLayout(ctx);
+        view.setOrientation(LinearLayout.VERTICAL);
+        int px12 = Helper.dp2pixels(ctx, 12);
+        int px6 = Helper.dp2pixels(ctx, 6);
+        view.setPadding(px12, px6, px12, px6);
         view.setBackground(ctx.getDrawable(R.drawable.toast_background));
 
-        TextView tv = view.findViewById(android.R.id.message);
+        TextView tv = new TextView(ctx);
+        tv.setId(android.R.id.message);
+        tv.setGravity(Gravity.CENTER);
+        tv.setTextAppearance(ctx, androidx.appcompat.R.style.TextAppearance_AppCompat_Small);
         tv.setTextColor(Helper.resolveColor(ctx, R.attr.colorInfoForeground));
         tv.setText(text);
+        view.addView(tv);
+
         toast.setView(view);
         toast.setDuration(duration);
 
@@ -72,13 +81,21 @@ public class ToastEx extends Toast {
 
         Context ctx = getThemedContext(context);
 
-        LayoutInflater inflater = LayoutInflater.from(ctx);
-        View view = inflater.inflate(R.layout.toast, null);
+        LinearLayout view = new LinearLayout(ctx);
+        view.setOrientation(LinearLayout.VERTICAL);
+        int px12 = Helper.dp2pixels(ctx, 12);
+        int px6 = Helper.dp2pixels(ctx, 6);
+        view.setPadding(px12, px6, px12, px6);
         view.setBackgroundColor(Helper.resolveColor(ctx, android.R.attr.textColorPrimary));
 
-        TextView tv = view.findViewById(android.R.id.message);
-        tv.setTextColor(Helper.resolveColor(ctx, android.R.attr.textColorPrimaryInverse)); // primary_text_default_material_light
+        TextView tv = new TextView(ctx);
+        tv.setId(android.R.id.message);
+        tv.setGravity(Gravity.CENTER);
+        tv.setTextAppearance(ctx, androidx.appcompat.R.style.TextAppearance_AppCompat_Small);
+        tv.setTextColor(Helper.resolveColor(ctx, android.R.attr.textColorPrimaryInverse));
         tv.setText(text);
+        view.addView(tv);
+
         toast.setView(view);
         toast.setDuration(duration);
         return toast;
