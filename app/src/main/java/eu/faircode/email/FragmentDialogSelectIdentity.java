@@ -49,13 +49,9 @@ public class FragmentDialogSelectIdentity extends FragmentDialogBase {
 
         final Bundle args = getArguments();
 
-        final View dview = LayoutInflater.from(context).inflate(R.layout.dialog_account_select, null);
-        RecyclerView rvSelect = dview.findViewById(R.id.rvSelect);
-        final ContentLoadingProgressBar pbWait = dview.findViewById(R.id.pbWait);
-        final Group grpReady = dview.findViewById(R.id.grpReady);
-
-        rvSelect.setHasFixedSize(false);
-        rvSelect.setLayoutManager(new LinearLayoutManager(context));
+        final AccountSelectDialogHelper helper = new AccountSelectDialogHelper(context);
+        RecyclerView rvSelect = helper.rvSelect;
+        View dview = helper.root;
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context)
                 .setIcon(R.drawable.twotone_person_24)
@@ -77,14 +73,12 @@ public class FragmentDialogSelectIdentity extends FragmentDialogBase {
         new SimpleTask<List<TupleIdentityEx>>() {
             @Override
             protected void onPreExecute(Bundle args) {
-                pbWait.setVisibility(View.VISIBLE);
-                grpReady.setVisibility(View.GONE);
+                helper.setLoading(true);
             }
 
             @Override
             protected void onPostExecute(Bundle args) {
-                pbWait.setVisibility(View.GONE);
-                grpReady.setVisibility(View.VISIBLE);
+                helper.setLoading(false);
             }
 
             @Override
