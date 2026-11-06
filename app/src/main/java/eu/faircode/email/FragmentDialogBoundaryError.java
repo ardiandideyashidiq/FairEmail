@@ -39,13 +39,10 @@ public class FragmentDialogBoundaryError extends FragmentDialogBase {
         String error = getArguments().getString("error");
 
         final Context context = getContext();
-        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_boundary_error, null);
-        TextView tvError = dview.findViewById(R.id.tvError);
-
-        tvError.setText(error);
+        DialogBoundaryErrorView errorView = new DialogBoundaryErrorView(context, error != null ? error : "");
 
         return new AlertDialog.Builder(context)
-                .setView(dview)
+                .setView(errorView.getComposeView())
                 .setPositiveButton(R.string.title_boundary_retry, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
