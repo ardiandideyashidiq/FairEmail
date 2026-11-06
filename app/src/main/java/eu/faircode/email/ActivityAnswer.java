@@ -54,63 +54,44 @@ public class ActivityAnswer extends ActivityBase {
         final CharSequence query = intent.getCharSequenceExtra(Intent.EXTRA_PROCESS_TEXT);
         final boolean readonly = intent.getBooleanExtra(Intent.EXTRA_PROCESS_TEXT_READONLY, false);
 
-        View view = LayoutInflater.from(this).inflate(R.layout.activity_answer, null);
-        setContentView(view);
-
-        getSupportActionBar().setSubtitle(query == null ? null : query.toString());
-
-        ListView lvAnswer = view.findViewById(R.id.lvAnswer);
-        Group grpReady = view.findViewById(R.id.grpReady);
-        ContentLoadingProgressBar pbWait = view.findViewById(R.id.pbWait);
-
-        lvAnswer.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> adapterView, View view, int pos, long id) {
-                final Context context = adapterView.getContext();
-                EntityAnswer answer = (EntityAnswer) adapterView.getAdapter().getItem(pos);
-
-                Helper.getParallelExecutor().submit(new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            DB db = DB.getInstance(context);
-                            db.answer().applyAnswer(answer.id, new Date().getTime());
-                        } catch (Throwable ex) {
-                            Log.e(ex);
-                        }
+        final ActivityAnswerView answerView = new ActivityAnswerView(this, answer -> {
+            Helper.getParallelExecutor().submit(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        DB db = DB.getInstance(ActivityAnswer.this);
+                        db.answer().applyAnswer(answer.id, new Date().getTime());
+                    } catch (Throwable ex) {
+                        Log.e(ex);
                     }
-                });
-
-                String html = answer.getData(context, null).getHtml();
-                String text = HtmlHelper.getText(context, html);
-
-                ClipboardManager cbm = Helper.getSystemService(ActivityAnswer.this, ClipboardManager.class);
-                cbm.setPrimaryClip(ClipData.newHtmlText(getString(R.string.app_name), text, html));
-
-                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
-                    ToastEx.makeText(context, R.string.title_clipboard_copied, Toast.LENGTH_LONG).show();
-
-                if (!readonly) {
-                    Intent result = new Intent();
-                    result.putExtra(Intent.EXTRA_PROCESS_TEXT, text);
-                    setResult(RESULT_OK, result);
                 }
+            });
 
-                finish();
+            String html = answer.getData(ActivityAnswer.this, null).getHtml();
+            String text = HtmlHelper.getText(ActivityAnswer.this, html);
+
+            ClipboardManager cbm = Helper.getSystemService(ActivityAnswer.this, ClipboardManager.class);
+            cbm.setPrimaryClip(ClipData.newHtmlText(getString(R.string.app_name), text, html));
+
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU)
+                ToastEx.makeText(ActivityAnswer.this, R.string.title_clipboard_copied, Toast.LENGTH_LONG).show();
+
+            if (!readonly) {
+                Intent result = new Intent();
+                result.putExtra(Intent.EXTRA_PROCESS_TEXT, text);
+                setResult(RESULT_OK, result);
             }
+
+            finish();
         });
+
+        setContentView(answerView.getComposeView());
+        getSupportActionBar().setSubtitle(query == null ? null : query.toString());
 
         new SimpleTask<List<EntityAnswer>>() {
             @Override
             protected void onPreExecute(Bundle args) {
-                grpReady.setVisibility(View.GONE);
-                pbWait.setVisibility(View.VISIBLE);
-            }
-
-            @Override
-            protected void onPostExecute(Bundle args) {
-                grpReady.setVisibility(View.VISIBLE);
-                pbWait.setVisibility(View.GONE);
+                answerView.setLoading(true);
             }
 
             @Override
@@ -121,9 +102,7 @@ public class ActivityAnswer extends ActivityBase {
 
             @Override
             protected void onExecuted(Bundle args, List<EntityAnswer> answers) {
-                ArrayAdapter<EntityAnswer> adapter = new ArrayAdapter<EntityAnswer>(ActivityAnswer.this,
-                        android.R.layout.simple_list_item_1, answers);
-                lvAnswer.setAdapter(adapter);
+                answerView.setAnswers(answers);
             }
 
             @Override
