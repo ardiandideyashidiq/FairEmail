@@ -701,21 +701,18 @@ public class FragmentOptionsBackup extends FragmentBase implements SharedPrefere
 
         final int colorWarning = Helper.resolveColor(context, R.attr.colorWarning);
 
-        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_import_progress, null);
-        ProgressBar pbWait = dview.findViewById(R.id.pbWait);
-        TextView tvLog = dview.findViewById(R.id.tvLog);
-        tvLog.setText(null);
+        final DialogImportProgressView progressView = new DialogImportProgressView(context);
 
         Map<String, Object> defer = Collections.synchronizedMap(new HashMap<>());
 
         AlertDialog dialog = new AlertDialog.Builder(context)
-                .setView(dview)
+                .setView(progressView.getComposeView())
                 .setPositiveButton(android.R.string.ok, null)
                 .setCancelable(false)
                 .setOnDismissListener(new DialogInterface.OnDismissListener() {
                     @Override
                     public void onDismiss(DialogInterface dialogInterface) {
-                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(dview.getContext());
+                        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
                         SharedPreferences.Editor editor = prefs.edit();
 
                         for (String key : defer.keySet()) {
@@ -752,18 +749,17 @@ public class FragmentOptionsBackup extends FragmentBase implements SharedPrefere
 
             @Override
             protected void onPreExecute(Bundle args) {
-                pbWait.setVisibility(View.VISIBLE);
+                progressView.setLoading(true);
             }
 
             @Override
             protected void onProgress(CharSequence status, Bundle data) {
-                ssb.append(status).append("\n");
-                tvLog.setText(ssb);
+                progressView.appendLog(status);
             }
 
             @Override
             protected void onPostExecute(Bundle args) {
-                pbWait.setVisibility(View.GONE);
+                progressView.setLoading(false);
                 ok.setEnabled(true);
             }
 
@@ -1319,7 +1315,7 @@ public class FragmentOptionsBackup extends FragmentBase implements SharedPrefere
                     onProgress(ssb, null);
                 }
             }
-        }.setHandler(tvLog.getHandler()).execute(this, args, "setup:import");
+        }.setHandler(ApplicationEx.getMainHandler()).execute(this, args, "setup:import");
     }
 
     private static boolean skipOption(String key) {
