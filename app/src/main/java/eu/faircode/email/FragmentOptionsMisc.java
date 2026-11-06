@@ -2417,22 +2417,17 @@ public class FragmentOptionsMisc extends FragmentBase implements SharedPreferenc
 
     private void onResetQuestions() {
         final Context context = getContext();
-        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_reset_questions, null);
-        final CheckBox cbGeneral = dview.findViewById(R.id.cbGeneral);
-        final CheckBox cbLinks = dview.findViewById(R.id.cbLinks);
-        final CheckBox cbFiles = dview.findViewById(R.id.cbFiles);
-        final CheckBox cbImages = dview.findViewById(R.id.cbImages);
-        final CheckBox cbFull = dview.findViewById(R.id.cbFull);
+        final DialogResetQuestionsView resetView = new DialogResetQuestionsView(context);
 
         new AlertDialog.Builder(context)
-                .setView(dview)
+                .setView(resetView.getComposeView())
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
                         SharedPreferences.Editor editor = prefs.edit();
 
-                        if (cbGeneral.isChecked())
+                        if (resetView.isGeneral())
                             for (String key : RESET_QUESTIONS)
                                 if (prefs.contains(key)) {
                                     Log.i("Removing option=" + key);
@@ -2441,23 +2436,22 @@ public class FragmentOptionsMisc extends FragmentBase implements SharedPreferenc
 
                         for (String key : prefs.getAll().keySet())
                             if ((!BuildConfig.DEBUG &&
-                                    key.startsWith("translated_") && cbGeneral.isChecked()) ||
+                                    key.startsWith("translated_") && resetView.isGeneral()) ||
                                     key.startsWith("oauth.") ||
-                                    (key.startsWith("announcement.") && cbGeneral.isChecked()) ||
-                                    (key.endsWith(".confirm_link") && cbLinks.isChecked()) ||
-                                    ("confirm_links".equals(key) && cbLinks.isChecked()) ||
-                                    (key.endsWith(".link_view") && cbLinks.isChecked()) ||
-                                    (key.endsWith(".link_sanitize") && cbLinks.isChecked()) ||
-                                    (key.endsWith(".confirm_files") && cbFiles.isChecked()) ||
-                                    ("confirm_files".equals(key) && cbFiles.isChecked()) ||
-                                    (key.endsWith(".show_images") && cbImages.isChecked()) ||
-                                    ("confirm_images".equals(key) && cbImages.isChecked()) ||
-                                    (key.endsWith(".show_full") && cbFull.isChecked()) ||
-                                    ("confirm_html".equals(key) && cbFull.isChecked())) {
+                                    (key.startsWith("announcement.") && resetView.isGeneral()) ||
+                                    (key.endsWith(".confirm_link") && resetView.isLinks()) ||
+                                    ("confirm_links".equals(key) && resetView.isLinks()) ||
+                                    (key.endsWith(".link_view") && resetView.isLinks()) ||
+                                    (key.endsWith(".link_sanitize") && resetView.isLinks()) ||
+                                    (key.endsWith(".confirm_files") && resetView.isFiles()) ||
+                                    ("confirm_files".equals(key) && resetView.isFiles()) ||
+                                    (key.endsWith(".show_images") && resetView.isImages()) ||
+                                    ("confirm_images".equals(key) && resetView.isImages()) ||
+                                    (key.endsWith(".show_full") && resetView.isFull()) ||
+                                    ("confirm_html".equals(key) && resetView.isFull())) {
                                 Log.i("Removing option=" + key);
                                 editor.remove(key);
                             }
-
                         editor.apply();
 
                         ToastEx.makeText(context, R.string.title_setup_done, Toast.LENGTH_LONG).show();
