@@ -48,19 +48,14 @@ public class FragmentDialogAskSpam extends FragmentDialogBase {
         boolean block_sender = prefs.getBoolean("block_sender", true);
         String text = getResources().getQuantityString(R.plurals.title_ask_spam, count, count);
 
-        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_ask_spam, null);
-        TextView tvMessage = dview.findViewById(R.id.tvMessage);
-        CheckBox cbBlockSender = dview.findViewById(R.id.cbBlockSender);
-
-        tvMessage.setText(text);
-        cbBlockSender.setChecked(block_sender);
+        final DialogAskSpamView askSpamView = new DialogAskSpamView(context, text, block_sender);
 
         return new AlertDialog.Builder(context)
-                .setView(dview)
+                .setView(askSpamView.getComposeView())
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        boolean block = cbBlockSender.isChecked();
+                        boolean block = askSpamView.isBlockSender();
                         prefs.edit().putBoolean("block_sender", block).apply();
                         getArguments().putBoolean("block", block);
                         sendResult(Activity.RESULT_OK);
