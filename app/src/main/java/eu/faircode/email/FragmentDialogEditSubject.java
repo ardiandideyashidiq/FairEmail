@@ -42,34 +42,17 @@ public class FragmentDialogEditSubject extends FragmentDialogBase {
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         final Context context = getContext();
-        View view = LayoutInflater.from(context).inflate(R.layout.dialog_edit_subject, null);
-        final EditText etSubject = view.findViewById(R.id.etSubject);
-
         Bundle args = getArguments();
-        etSubject.setText(args.getString("subject"));
-
-        etSubject.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId != EditorInfo.IME_ACTION_DONE)
-                    return false;
-                AlertDialog dialog = (AlertDialog) getDialog();
-                if (dialog == null)
-                    return false;
-                Button btnOk = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-                if (btnOk == null)
-                    return false;
-                btnOk.performClick();
-                return true;
-            }
-        });
+        String initialSubject = (args != null ? args.getString("subject") : "");
+        final DialogEditSubjectView subjectView = new DialogEditSubjectView(context, initialSubject);
 
         return new AlertDialog.Builder(context)
-                .setView(view)
+                .setView(subjectView.getComposeView())
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        args.putString("subject", etSubject.getText().toString());
+                        if (args != null)
+                            args.putString("subject", subjectView.getText());
                         sendResult(RESULT_OK);
                     }
                 })
