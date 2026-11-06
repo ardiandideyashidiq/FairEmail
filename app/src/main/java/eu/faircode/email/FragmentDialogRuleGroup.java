@@ -46,12 +46,9 @@ public class FragmentDialogRuleGroup extends FragmentDialogBase {
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         final Context context = getContext();
-        View view = LayoutInflater.from(context).inflate(R.layout.dialog_rule_group, null);
-        final AutoCompleteTextView etGroup = view.findViewById(R.id.etGroup);
-
-        ArrayAdapter adapterGroup = new ArrayAdapter<>(context, R.layout.spinner_item1_dropdown, android.R.id.text1);
-        etGroup.setThreshold(1);
-        etGroup.setAdapter(adapterGroup);
+        Bundle args = getArguments();
+        String initialName = (args != null ? args.getString("name") : null);
+        final DialogRuleGroupView groupView = new DialogRuleGroupView(context, initialName);
 
         new SimpleTask<List<String>>() {
             @Override
@@ -62,8 +59,7 @@ public class FragmentDialogRuleGroup extends FragmentDialogBase {
 
             @Override
             protected void onExecuted(Bundle args, List<String> groups) {
-                adapterGroup.clear();
-                adapterGroup.addAll(groups);
+                groupView.setGroups(groups);
             }
 
             @Override
@@ -72,32 +68,14 @@ public class FragmentDialogRuleGroup extends FragmentDialogBase {
             }
         }.execute(this, new Bundle(), "rule:groups");
 
-        Bundle args = getArguments();
-        etGroup.setText(args.getString("name"));
-
-        etGroup.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId != EditorInfo.IME_ACTION_DONE)
-                    return false;
-                AlertDialog dialog = (AlertDialog) getDialog();
-                if (dialog == null)
-                    return false;
-                Button btnOk = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-                if (btnOk == null)
-                    return false;
-                btnOk.performClick();
-                return true;
-            }
-        });
-
         return new AlertDialog.Builder(context)
-                .setView(view)
+                .setView(groupView.getComposeView())
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        String group = etGroup.getText().toString().trim();
-                        args.putString("name", TextUtils.isEmpty(group) ? null : group);
+                        String group = groupView.getText().trim();
+                        if (args != null)
+                            args.putString("name", TextUtils.isEmpty(group) ? null : group);
                         sendResult(RESULT_OK);
                     }
                 })
