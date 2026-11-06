@@ -45,7 +45,7 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 
 public class FragmentDialogUnsubscribe extends FragmentDialogBase {
-    private TextView tvNoInternet;
+    private DialogUnsubscribeView unsubscribeView;
     private static final int UNSUBSCRIBE_TIMEOUT = 20 * 1000;
 
     @NonNull
@@ -57,120 +57,116 @@ public class FragmentDialogUnsubscribe extends FragmentDialogBase {
 
         final Context context = getContext();
 
-        View view = LayoutInflater.from(context).inflate(R.layout.dialog_unsubscribe, null);
-        final TextView tvSender = view.findViewById(R.id.tvSender);
-        final TextView tvUri = view.findViewById(R.id.tvUri);
-        final Button btnUnsubscribe = view.findViewById(R.id.btnUnsubscribe);
-        final ProgressBar pbUnsubscribe = view.findViewById(R.id.pbUnsubscribe);
-        tvNoInternet = view.findViewById(R.id.tvNoInternet);
-
-        tvSender.setText(from);
-        tvUri.setText(uri);
-        pbUnsubscribe.setVisibility(View.GONE);
-
-        AlertDialog dialog = new AlertDialog.Builder(context)
-                .setView(view)
+        unsubscribeView = new DialogUnsubscribeView(
+                context,
+                from != null ? from : "",
+                uri != null ? uri : "",
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        executeUnsubscribe(args);
+                    }
+                }
+        );
+        return new AlertDialog.Builder(context)
+                .setView(unsubscribeView.getComposeView())
                 .setNeutralButton(android.R.string.cancel, null)
                 .create();
+    }
 
-        btnUnsubscribe.setOnClickListener(new View.OnClickListener() {
+    private void executeUnsubscribe(Bundle args) {
+        final Context context = getContext();
+        new SimpleTask<String>() {
             @Override
-            public void onClick(View v) {
-                new SimpleTask<String>() {
-                    @Override
-                    protected void onPreExecute(Bundle args) {
-                        btnUnsubscribe.setEnabled(false);
-                        pbUnsubscribe.setVisibility(View.VISIBLE);
-                    }
-
-                    @Override
-                    protected void onPostExecute(Bundle args) {
-                        btnUnsubscribe.setEnabled(true);
-                        pbUnsubscribe.setVisibility(View.GONE);
-                    }
-
-                    @Override
-                    protected String onExecute(Context context, Bundle args) throws Throwable {
-                        final String uri = args.getString("uri");
-                        final String request = "List-Unsubscribe=One-Click";
-
-                        boolean connected = ConnectionHelper.getNetworkState(getContext()).isConnected();
-                        if (!connected)
-                            throw new IllegalStateException(context.getString(R.string.title_no_internet));
-
-                        // https://datatracker.ietf.org/doc/html/rfc8058
-
-                        int redirects = 0;
-                        URL url = new URL(uri);
-                        do {
-                            Log.i("Unsubscribe request=" + request + " uri=" + uri);
-
-                            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-                            connection.setRequestMethod("POST");
-                            connection.setDoInput(true);
-                            connection.setDoOutput(true);
-                            connection.setReadTimeout(UNSUBSCRIBE_TIMEOUT);
-                            connection.setConnectTimeout(UNSUBSCRIBE_TIMEOUT);
-                            ConnectionHelper.setUserAgent(context, connection);
-                            connection.setRequestProperty("Content-Length", Integer.toString(request.length()));
-                            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-                            connection.connect();
-
-                            try {
-                                connection.getOutputStream().write(request.getBytes());
-
-                                int status = connection.getResponseCode();
-                                if (status == HttpURLConnection.HTTP_MOVED_PERM ||
-                                        status == HttpURLConnection.HTTP_MOVED_TEMP ||
-                                        status == HttpURLConnection.HTTP_SEE_OTHER ||
-                                        status == 307 /* Temporary redirect */ ||
-                                        status == 308 /* Permanent redirect */) {
-                                    String header = connection.getHeaderField("Location");
-                                    if (header != null) {
-                                        String location = URLDecoder.decode(header, StandardCharsets.UTF_8.name());
-                                        Log.i("Unsubscribe redirect=" + location);
-                                        url = new URL(url, location);
-                                        continue;
-                                    }
-                                }
-
-                                if (status >= 300) {
-                                    Log.w("Unsubscribe status=" + status + " " + connection.getResponseMessage());
-                                    throw new IllegalArgumentException("HTTP status " + status);
-                                } else
-                                    Log.i("Unsubscribe status=" + status);
-
-                                return Helper.readStream(connection.getInputStream());
-                            } finally {
-                                connection.disconnect();
-                            }
-                        } while (++redirects <= ConnectionHelper.MAX_REDIRECTS);
-
-                        return null;
-                    }
-
-                    @Override
-                    protected void onExecuted(Bundle args, String output) {
-                        ToastEx.makeText(context, R.string.title_completed, Toast.LENGTH_LONG).show();
-                        dialog.dismiss();
-                    }
-
-                    @Override
-                    protected void onException(Bundle args, Throwable ex) {
-                        dialog.dismiss();
-                        if (ex instanceof IllegalStateException || ex instanceof UnknownHostException)
-                            ToastEx.makeText(context, ex.getMessage(), Toast.LENGTH_LONG).show();
-                        else if (ex instanceof IllegalArgumentException || ex instanceof IOException)
-                            ToastEx.makeText(context,
-                                    context.getString(R.string.title_unsubscribe_error,
-                                            Log.formatThrowable(ex, false)),
-                                    Toast.LENGTH_LONG).show();
-                    }
-                }.execute(FragmentDialogUnsubscribe.this, args, "unsubscribe");
+            protected void onPreExecute(Bundle args) {
+                if (unsubscribeView != null)
+                    unsubscribeView.setLoading(true);
             }
-        });
 
-        return dialog;
+            @Override
+            protected void onPostExecute(Bundle args) {
+                if (unsubscribeView != null)
+                    unsubscribeView.setLoading(false);
+            }
+
+            @Override
+            protected String onExecute(Context context, Bundle args) throws Throwable {
+                final String uri = args.getString("uri");
+                final String request = "List-Unsubscribe=One-Click";
+
+                boolean connected = ConnectionHelper.getNetworkState(getContext()).isConnected();
+                if (!connected)
+                    throw new IllegalStateException(context.getString(R.string.title_no_internet));
+
+                // https://datatracker.ietf.org/doc/html/rfc8058
+
+                int redirects = 0;
+                URL url = new URL(uri);
+                do {
+                    Log.i("Unsubscribe request=" + request + " uri=" + uri);
+
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setRequestMethod("POST");
+                    connection.setDoInput(true);
+                    connection.setDoOutput(true);
+                    connection.setReadTimeout(UNSUBSCRIBE_TIMEOUT);
+                    connection.setConnectTimeout(UNSUBSCRIBE_TIMEOUT);
+                    ConnectionHelper.setUserAgent(context, connection);
+                    connection.setRequestProperty("Content-Length", Integer.toString(request.length()));
+                    connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+                    connection.connect();
+
+                    try {
+                        connection.getOutputStream().write(request.getBytes());
+
+                        int status = connection.getResponseCode();
+                        if (status == HttpURLConnection.HTTP_MOVED_PERM ||
+                                status == HttpURLConnection.HTTP_MOVED_TEMP ||
+                                status == HttpURLConnection.HTTP_SEE_OTHER ||
+                                status == 307 /* Temporary redirect */ ||
+                                status == 308 /* Permanent redirect */) {
+                            String header = connection.getHeaderField("Location");
+                            if (header != null) {
+                                String location = URLDecoder.decode(header, StandardCharsets.UTF_8.name());
+                                Log.i("Unsubscribe redirect=" + location);
+                                url = new URL(url, location);
+                                continue;
+                            }
+                        }
+
+                        if (status >= 300) {
+                            Log.w("Unsubscribe status=" + status + " " + connection.getResponseMessage());
+                            throw new IllegalArgumentException("HTTP status " + status);
+                        } else
+                            Log.i("Unsubscribe status=" + status);
+
+                        return Helper.readStream(connection.getInputStream());
+                    } finally {
+                        connection.disconnect();
+                    }
+                } while (++redirects <= ConnectionHelper.MAX_REDIRECTS);
+
+                return null;
+            }
+
+            @Override
+            protected void onExecuted(Bundle args, String output) {
+                ToastEx.makeText(context, R.string.title_completed, Toast.LENGTH_LONG).show();
+                dismiss();
+            }
+
+            @Override
+            protected void onException(Bundle args, Throwable ex) {
+                dismiss();
+                if (ex instanceof IllegalStateException || ex instanceof UnknownHostException)
+                    ToastEx.makeText(context, ex.getMessage(), Toast.LENGTH_LONG).show();
+                else if (ex instanceof IllegalArgumentException || ex instanceof IOException)
+                    ToastEx.makeText(context,
+                            context.getString(R.string.title_unsubscribe_error,
+                             Log.formatThrowable(ex, false)),
+                            Toast.LENGTH_LONG).show();
+            }
+        }.execute(FragmentDialogUnsubscribe.this, args, "unsubscribe");
     }
 
     @Override
@@ -226,7 +222,8 @@ public class FragmentDialogUnsubscribe extends FragmentDialogBase {
         public void run() {
             try {
                 ConnectionHelper.NetworkState state = ConnectionHelper.getNetworkState(getContext());
-                tvNoInternet.setVisibility(state.isConnected() ? View.GONE : View.VISIBLE);
+                if (unsubscribeView != null)
+                    unsubscribeView.setHasInternet(state.isConnected());
             } catch (Throwable ex) {
                 Log.e(ex);
             }
