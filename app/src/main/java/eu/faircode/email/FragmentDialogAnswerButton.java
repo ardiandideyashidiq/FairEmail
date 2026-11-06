@@ -25,11 +25,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.widget.AdapterView;
-import android.widget.Spinner;
-import android.widget.TextView;
+import java.util.Arrays;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -45,55 +41,40 @@ public class FragmentDialogAnswerButton extends FragmentDialogBase {
 
         final String[] values = getResources().getStringArray(R.array.answerValues);
 
-        final View dview = LayoutInflater.from(context).inflate(R.layout.dialog_answer_button, null);
-        Spinner spAnswerActionSingle = dview.findViewById(R.id.spAnswerActionSingle);
-        Spinner spAnswerActionLong = dview.findViewById(R.id.spAnswerActionLong);
-        TextView tvAnswerActionWarning = dview.findViewById(R.id.tvAnswerActionWarning);
-
-        AdapterView.OnItemSelectedListener onSelected = new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                String s = values[spAnswerActionSingle.getSelectedItemPosition()];
-                String l = values[spAnswerActionLong.getSelectedItemPosition()];
-                tvAnswerActionWarning.setVisibility(
-                        "menu".equals(s) || "menu".equals(l)
-                                ? View.GONE : View.VISIBLE);
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-                // Do nothing
-            }
-        };
-
-        spAnswerActionSingle.setOnItemSelectedListener(onSelected);
-        spAnswerActionLong.setOnItemSelectedListener(onSelected);
+        String[] names = getResources().getStringArray(R.array.answerNames);
 
         String answer_default = prefs.getString("answer_single", "menu");
+        int initialSingle = 0;
         for (int pos = 0; pos < values.length; pos++)
             if (values[pos].equals(answer_default)) {
-                spAnswerActionSingle.setSelection(pos);
+                initialSingle = pos;
                 break;
             }
 
         boolean reply_all = prefs.getBoolean("reply_all", false);
         String answer_action = prefs.getString("answer_action", reply_all ? "reply_all" : "reply");
+        int initialLong = 0;
         for (int pos = 0; pos < values.length; pos++)
             if (values[pos].equals(answer_action)) {
-                spAnswerActionLong.setSelection(pos);
+                initialLong = pos;
                 break;
             }
 
-        tvAnswerActionWarning.setVisibility(View.GONE);
+        final DialogAnswerButtonView answerButtonView = new DialogAnswerButtonView(
+                context,
+                Arrays.asList(names),
+                initialSingle,
+                initialLong
+        );
 
         return new AlertDialog.Builder(getContext())
-                .setView(dview)
+                .setView(answerButtonView.getComposeView())
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         SharedPreferences.Editor editor = prefs.edit();
-                        editor.putString("answer_single", values[spAnswerActionSingle.getSelectedItemPosition()]).apply();
-                        editor.putString("answer_action", values[spAnswerActionLong.getSelectedItemPosition()]).apply();
+                        editor.putString("answer_single", values[answerButtonView.getSingleSelectedPosition()]).apply();
+                        editor.putString("answer_action", values[answerButtonView.getLongSelectedPosition()]).apply();
                         sendResult(Activity.RESULT_OK);
                     }
                 })
