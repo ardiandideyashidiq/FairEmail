@@ -42,7 +42,7 @@ import androidx.preference.PreferenceManager;
 import java.util.List;
 
 public class FragmentDialogNotes extends FragmentDialogBase {
-    private ViewButtonColor btnColor;
+    private DialogNotesView notesView;
 
     @NonNull
     @Override
@@ -58,31 +58,25 @@ public class FragmentDialogNotes extends FragmentDialogBase {
                 ? prefs.getInt("note_color", Color.TRANSPARENT)
                 : args.getInt("color"));
 
-        View view = LayoutInflater.from(context).inflate(R.layout.dialog_notes, null);
-        final EditText etNotes = view.findViewById(R.id.etNotes);
-        btnColor = view.findViewById(R.id.btnColor);
+        notesView = new DialogNotesView(
+                context,
+                notes,
+                color != null ? color : Color.TRANSPARENT,
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        Bundle args = new Bundle();
+                        args.putInt("color", notesView.getColor());
+                        args.putString("title", getString(R.string.title_color));
+                        args.putBoolean("reset", true);
 
-        etNotes.setText(notes);
-        btnColor.setColor(color);
-
-        etNotes.selectAll();
-
-        btnColor.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Helper.hideKeyboard(etNotes);
-
-                Bundle args = new Bundle();
-                args.putInt("color", btnColor.getColor());
-                args.putString("title", getString(R.string.title_color));
-                args.putBoolean("reset", true);
-
-                FragmentDialogColor fragment = new FragmentDialogColor();
-                fragment.setArguments(args);
-                fragment.setTargetFragment(FragmentDialogNotes.this, 1);
-                fragment.show(getParentFragmentManager(), "notes:color");
-            }
-        });
+                        FragmentDialogColor fragment = new FragmentDialogColor();
+                        fragment.setArguments(args);
+                        fragment.setTargetFragment(FragmentDialogNotes.this, 1);
+                        fragment.show(getParentFragmentManager(), "notes:color");
+                    }
+                }
+        );
 
         final SimpleTask<Void> task = new SimpleTask<Void>() {
             @Override
@@ -140,14 +134,14 @@ public class FragmentDialogNotes extends FragmentDialogBase {
         };
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context)
-                .setView(view)
+                .setView(notesView.getComposeView())
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         Bundle args = new Bundle();
                         args.putLong("id", id);
-                        args.putString("notes", etNotes.getText().toString());
-                        args.putInt("color", btnColor.getColor());
+                        args.putString("notes", notesView.getNotes());
+                        args.putInt("color", notesView.getColor());
 
                         task.execute(getContext(), getActivity(), args, "message:note");
                     }
@@ -184,8 +178,8 @@ public class FragmentDialogNotes extends FragmentDialogBase {
             if (resultCode == RESULT_OK && data != null) {
                 Bundle args = data.getBundleExtra("args");
                 int color = args.getInt("color");
-                btnColor.setColor(color);
-
+                if (notesView != null)
+                    notesView.setColor(color);
                 Context context = getContext();
                 if (context != null) {
                     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
