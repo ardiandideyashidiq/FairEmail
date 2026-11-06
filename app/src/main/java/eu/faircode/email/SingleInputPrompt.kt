@@ -23,7 +23,9 @@ import androidx.compose.ui.unit.dp
 fun SingleInputPrompt(
     title: String,
     textState: MutableState<String>,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isNumber: Boolean = false,
+    isPassword: Boolean = false
 ) {
     Column(
         modifier = modifier
@@ -39,6 +41,10 @@ fun SingleInputPrompt(
             value = textState.value,
             onValueChange = { textState.value = it },
             singleLine = true,
+            visualTransformation = if (isPassword) androidx.compose.ui.text.input.PasswordVisualTransformation() else androidx.compose.ui.text.input.VisualTransformation.None,
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                keyboardType = if (isNumber) androidx.compose.ui.text.input.KeyboardType.Number else androidx.compose.ui.text.input.KeyboardType.Text
+            ),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 16.dp)
@@ -46,10 +52,12 @@ fun SingleInputPrompt(
     }
 }
 
-class SingleInputPromptView(
+class SingleInputPromptView @JvmOverloads constructor(
     context: Context,
     @param:StringRes private val titleRes: Int,
-    initialText: String = ""
+    initialText: String = "",
+    val isNumber: Boolean = false,
+    val isPassword: Boolean = false
 ) {
     val textState: MutableState<String> = mutableStateOf(initialText)
 
@@ -61,7 +69,9 @@ class SingleInputPromptView(
             FairEmailTheme {
                 SingleInputPrompt(
                     title = stringResource(id = titleRes),
-                    textState = textState
+                    textState = textState,
+                    isNumber = isNumber,
+                    isPassword = isPassword
                 )
             }
         }
