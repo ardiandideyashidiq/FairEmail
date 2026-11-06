@@ -511,37 +511,28 @@ public class AdapterAttachment extends RecyclerView.Adapter<AdapterAttachment.Vi
             boolean confirm = prefs.getBoolean("confirm_files", true);
             boolean confirm_type = prefs.getBoolean(extension + ".confirm_files", true);
             if (extension != null && confirm && confirm_type) {
-                View view = LayoutInflater.from(context).inflate(R.layout.dialog_view_file, null);
-                TextView tvFile = view.findViewById(R.id.tvFile);
-                TextView tvType = view.findViewById(R.id.tvType);
-                CheckBox cbNotAgainType = view.findViewById(R.id.cbNotAgainType);
-                CheckBox cbNotAgain = view.findViewById(R.id.cbNotAgain);
+                String fileTitle = context.getString(R.string.title_ask_view_file, attachment.name);
+                String mimeType = attachment.getMimeType();
+                String extLabel = context.getString(R.string.title_no_ask_for_again, "." + extension);
 
-                tvFile.setText(context.getString(R.string.title_ask_view_file, attachment.name));
-                tvType.setText(attachment.getMimeType());
-                String msg = context.getString(R.string.title_no_ask_for_again, "<b>" + "." + extension + "</b>");
-                cbNotAgainType.setText(HtmlHelper.fromHtml(msg, context));
-
-                cbNotAgainType.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                    @Override
-                    public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
-                        prefs.edit().putBoolean(extension + ".confirm_files", false).apply();
-                    }
-                });
-
-                cbNotAgain.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                    @Override
-                    public void onCheckedChanged(CompoundButton compoundButton, boolean isChecked) {
-                        prefs.edit().putBoolean("confirm_files", false).apply();
-                        cbNotAgainType.setEnabled(!isChecked);
-                    }
-                });
+                final DialogViewFileView viewFileView = new DialogViewFileView(
+                        context,
+                        fileTitle,
+                        mimeType,
+                        extLabel,
+                        null,
+                        null
+                );
 
                 new AlertDialog.Builder(context)
-                        .setView(view)
+                        .setView(viewFileView.getComposeView())
                         .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialogInterface, int i) {
+                                if (viewFileView.isNotAgain())
+                                    prefs.edit().putBoolean("confirm_files", false).apply();
+                                if (viewFileView.isNotAgainType())
+                                    prefs.edit().putBoolean(extension + ".confirm_files", false).apply();
                                 onViewConfirmed(attachment);
                             }
                         })
