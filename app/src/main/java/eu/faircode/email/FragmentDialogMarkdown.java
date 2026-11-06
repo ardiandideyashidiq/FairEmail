@@ -50,49 +50,26 @@ public class FragmentDialogMarkdown extends FragmentDialogBase {
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         final Context context = getContext();
 
-        String option = getArguments().getString("option");
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        final String option = getArguments().getString("option");
+        final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
-        final View dview = LayoutInflater.from(context).inflate(R.layout.dialog_markdown, null);
-        final TextView tvMarkdown = dview.findViewById(R.id.tvMarkdown);
-        final CheckBox cbNotAgain = dview.findViewById(R.id.cbNotAgain);
-        final ImageButton ibCancel = dview.findViewById(R.id.ibCancel);
-        final ContentLoadingProgressBar pbWait = dview.findViewById(R.id.pbWait);
-        final Group grpReady = dview.findViewById(R.id.grpReady);
-
-        tvMarkdown.setText(null);
-
-        cbNotAgain.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean checked) {
-                prefs.edit().putBoolean(option, !checked).apply();
-            }
-        });
-
-        ibCancel.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                dismiss();
-            }
-        });
+        final DialogMarkdownView markdownView = new DialogMarkdownView(
+                context,
+                !TextUtils.isEmpty(option),
+                checked -> {
+                    if (!TextUtils.isEmpty(option))
+                        prefs.edit().putBoolean(option, !checked).apply();
+                },
+                this::dismiss
+        );
 
         Dialog dialog = new Dialog(context);
-        //dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-        dialog.setContentView(dview);
+        dialog.setContentView(markdownView.getComposeView());
 
         new SimpleTask<Spanned>() {
             @Override
             protected void onPreExecute(Bundle args) {
-                grpReady.setVisibility(View.GONE);
-                cbNotAgain.setVisibility(View.GONE);
-                pbWait.setVisibility(View.VISIBLE);
-            }
-
-            @Override
-            protected void onPostExecute(Bundle args) {
-                grpReady.setVisibility(View.VISIBLE);
-                cbNotAgain.setVisibility(TextUtils.isEmpty(option) ? View.GONE : View.VISIBLE);
-                pbWait.setVisibility(View.GONE);
+                markdownView.setLoading(true);
             }
 
             @Override
@@ -123,8 +100,7 @@ public class FragmentDialogMarkdown extends FragmentDialogBase {
 
             @Override
             protected void onExecuted(Bundle args, Spanned markdown) {
-                tvMarkdown.setText(markdown);
-                tvMarkdown.setMovementMethod(LinkMovementMethodCompat.getInstance());
+                markdownView.setMarkdown(markdown);
             }
 
             @Override
