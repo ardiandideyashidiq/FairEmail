@@ -23,8 +23,7 @@ import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
-
+import androidx.compose.ui.platform.ComposeView;
 import androidx.annotation.NonNull;
 import androidx.lifecycle.Lifecycle;
 import androidx.lifecycle.LifecycleObserver;
@@ -50,16 +49,11 @@ public class AdapterRuleMatch extends RecyclerView.Adapter<AdapterRuleMatch.View
     private DateFormat DTF;
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        private View view;
-        private TextView tvTime;
-        private TextView tvSubject;
+        private ComposeView composeView;
 
-        ViewHolder(View itemView) {
+        ViewHolder(ComposeView itemView) {
             super(itemView);
-
-            view = itemView.findViewById(R.id.clItem);
-            tvTime = itemView.findViewById(R.id.tvTime);
-            tvSubject = itemView.findViewById(R.id.tvSubject);
+            composeView = itemView;
         }
 
         private void wire() {
@@ -69,8 +63,8 @@ public class AdapterRuleMatch extends RecyclerView.Adapter<AdapterRuleMatch.View
         }
 
         private void bindTo(EntityMessage message) {
-            tvTime.setText(D.format(message.received) + " " + DTF.format(message.received));
-            tvSubject.setText(message.subject);
+            String time = D.format(message.received) + " " + DTF.format(message.received);
+            RuleMatchItemBinder.bind(composeView, time, message.subject);
         }
     }
 
@@ -176,7 +170,7 @@ public class AdapterRuleMatch extends RecyclerView.Adapter<AdapterRuleMatch.View
     @Override
     @NonNull
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        return new ViewHolder(inflater.inflate(R.layout.item_rule_match, parent, false));
+        return new ViewHolder(RuleMatchItemBinder.createComposeView(parent));
     }
 
     @Override
