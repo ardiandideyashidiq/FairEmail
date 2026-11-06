@@ -53,59 +53,28 @@ public class FragmentDialogAsk extends FragmentDialogBase {
         int faq = args.getInt("faq");
 
         final Context context = getContext();
-        final int colorError = Helper.resolveColor(context, androidx.appcompat.R.attr.colorError);
-
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
-        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_ask_again, null);
-        TextView tvMessage = dview.findViewById(R.id.tvMessage);
-        TextView tvRemark = dview.findViewById(R.id.tvRemark);
-        CheckBox cbNotAgain = dview.findViewById(R.id.cbNotAgain);
-        TextView tvAccept = dview.findViewById(R.id.tvAccept);
-        ImageButton ibInfo = dview.findViewById(R.id.ibInfo);
-
-        tvMessage.setText(question);
-        tvRemark.setText(remark);
-        tvRemark.setVisibility(remark == null ? View.GONE : View.VISIBLE);
-        cbNotAgain.setVisibility(notagain == null ? View.GONE : View.VISIBLE);
-        tvAccept.setText(accept);
-        tvAccept.setVisibility(notagain == null && accept != null ? View.VISIBLE : View.GONE);
-        ibInfo.setVisibility(faq == 0 ? View.GONE : View.VISIBLE);
-
-        if (warning) {
-            Drawable w = ContextCompat.getDrawable(context, R.drawable.twotone_warning_24);
-            w.setBounds(0, 0, w.getIntrinsicWidth(), w.getIntrinsicHeight());
-            w.setTint(colorError);
-            tvMessage.setCompoundDrawablesRelative(w, null, null, null);
-            tvMessage.setCompoundDrawablePadding(Helper.dp2pixels(context, 12));
-        }
-
-        if (notagain != null)
-            cbNotAgain.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    tvAccept.setVisibility(isChecked && accept != null ? View.VISIBLE : View.GONE);
-                }
-            });
-
-        if (faq != 0)
-            ibInfo.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Helper.viewFAQ(v.getContext(), faq);
-                }
-            });
+        final DialogAskAgainView askAgainView = new DialogAskAgainView(
+                context,
+                question,
+                remark,
+                accept,
+                notagain != null,
+                warning,
+                faq != 0 ? () -> Helper.viewFAQ(context, faq) : null
+        );
 
         EntityLog.log(context, "Ask " + TextUtils.join(" ", Log.getExtras(args)));
 
         return new AlertDialog.Builder(context)
-                .setView(dview)
+                .setView(askAgainView.getComposeView())
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         EntityLog.log(context, "Ask confirmed");
                         if (notagain != null)
-                            prefs.edit().putBoolean(notagain, cbNotAgain.isChecked()).apply();
+                            prefs.edit().putBoolean(notagain, askAgainView.isNotAgain()).apply();
                         sendResult(Activity.RESULT_OK);
                     }
                 })
