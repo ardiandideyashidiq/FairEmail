@@ -26,33 +26,22 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextUtils;
-import android.text.TextWatcher;
-import android.view.KeyEvent;
-import android.view.LayoutInflater;
-import android.view.View;
 import android.view.WindowManager;
-import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
-import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.preference.PreferenceManager;
 
-import com.google.android.material.textfield.TextInputLayout;
 
 public class FragmentDialogExport extends FragmentDialogBase {
-    private TextInputLayout tilPassword1;
-    private TextInputLayout tilPassword2;
+    private DialogExportView exportView;
 
     @Override
     public void onSaveInstanceState(@NonNull Bundle outState) {
-        outState.putString("fair:password1", tilPassword1 == null ? null : tilPassword1.getEditText().getText().toString());
-        outState.putString("fair:password2", tilPassword2 == null ? null : tilPassword2.getEditText().getText().toString());
+        outState.putString("fair:password1", exportView == null ? null : exportView.getPassword1());
+        outState.putString("fair:password2", exportView == null ? null : exportView.getPassword2());
         super.onSaveInstanceState(outState);
     }
 
@@ -60,22 +49,42 @@ public class FragmentDialogExport extends FragmentDialogBase {
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         Context context = getContext();
-        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_export, null);
-        tilPassword1 = dview.findViewById(R.id.tilPassword1);
-        tilPassword2 = dview.findViewById(R.id.tilPassword2);
+        String initialPassword1 = savedInstanceState != null ? savedInstanceState.getString("fair:password1") : null;
+        String initialPassword2 = savedInstanceState != null ? savedInstanceState.getString("fair:password2") : null;
 
-        if (savedInstanceState != null) {
-            tilPassword1.getEditText().setText(savedInstanceState.getString("fair:password1"));
-            tilPassword2.getEditText().setText(savedInstanceState.getString("fair:password2"));
-        }
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+        boolean debug = (BuildConfig.DEBUG || prefs.getBoolean("debug", false));
+
+        exportView = new DialogExportView(
+                context,
+                initialPassword1,
+                initialPassword2,
+                debug,
+                valid -> {
+                    AlertDialog dialog = (AlertDialog) getDialog();
+                    if (dialog != null) {
+                        Button btnOk = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+                        if (btnOk != null)
+                            btnOk.setEnabled(valid);
+                    }
+                },
+                () -> {
+                    AlertDialog dialog = (AlertDialog) getDialog();
+                    if (dialog != null) {
+                        Button btnOk = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+                        if (btnOk != null && btnOk.isEnabled())
+                            btnOk.performClick();
+                    }
+                }
+        );
 
         Dialog dialog = new AlertDialog.Builder(context)
-                .setView(dview)
+                .setView(exportView.getComposeView())
                 .setPositiveButton(R.string.title_save_file, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         ViewModelExport vme = new ViewModelProvider(getActivity()).get(ViewModelExport.class);
-                        vme.setPassword(tilPassword1.getEditText().getText().toString());
+                        vme.setPassword(exportView.getPassword1());
                         sendResult(RESULT_OK);
                     }
                 })
@@ -91,47 +100,11 @@ public class FragmentDialogExport extends FragmentDialogBase {
     public void onStart() {
         super.onStart();
 
-        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
-        boolean debug = (BuildConfig.DEBUG || prefs.getBoolean("debug", false));
-
-        Button btnOk = ((AlertDialog) getDialog()).getButton(AlertDialog.BUTTON_POSITIVE);
-
-        TextWatcher w = new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                // Do nothing
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // Do nothing
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                String p1 = tilPassword1.getEditText().getText().toString();
-                String p2 = tilPassword2.getEditText().getText().toString();
-                btnOk.setEnabled((debug || !TextUtils.isEmpty(p1)) && p1.equals(p2));
-                tilPassword2.setHint(!TextUtils.isEmpty(p2) && !p2.equals(p1)
-                        ? R.string.title_setup_password_different
-                        : R.string.title_setup_password_repeat);
-            }
-        };
-
-        tilPassword1.getEditText().addTextChangedListener(w);
-        tilPassword2.getEditText().addTextChangedListener(w);
-        w.afterTextChanged(null);
-
-        tilPassword2.getEditText().setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId == EditorInfo.IME_ACTION_DONE) {
-                    if (btnOk.isEnabled())
-                        btnOk.performClick();
-                    return true;
-                } else
-                    return false;
-            }
-        });
+        AlertDialog dialog = (AlertDialog) getDialog();
+        if (dialog != null) {
+            Button btnOk = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            if (btnOk != null && exportView != null)
+                btnOk.setEnabled(exportView.isValid());
+        }
     }
 }
