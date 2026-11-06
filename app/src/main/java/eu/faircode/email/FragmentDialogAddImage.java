@@ -22,36 +22,31 @@ package eu.faircode.email;
 import static android.app.Activity.RESULT_OK;
 
 import android.app.Dialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.provider.MediaStore;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.AdapterView;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
-import android.widget.ImageButton;
-import android.widget.ImageView;
-import android.widget.RadioGroup;
-import android.widget.Spinner;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.preference.PreferenceManager;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 public class FragmentDialogAddImage extends FragmentDialogBase {
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
+        final Context context = getContext();
         int title = getArguments().getInt("title");
 
-        final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
+        final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         boolean add_inline = prefs.getBoolean("add_inline", true);
         boolean resize_images = prefs.getBoolean("resize_images", true);
         int resize = prefs.getInt("resize", FragmentCompose.REDUCED_IMAGE_SIZE);
@@ -59,117 +54,67 @@ public class FragmentDialogAddImage extends FragmentDialogBase {
         boolean privacy_images = prefs.getBoolean("privacy_images", false);
         boolean image_dialog = prefs.getBoolean("image_dialog", true);
 
-        final ViewGroup dview = (ViewGroup) LayoutInflater.from(getContext()).inflate(R.layout.dialog_add_image, null);
-        final ImageView ivType = dview.findViewById(R.id.ivType);
-        final RadioGroup rgAction = dview.findViewById(R.id.rgAction);
-        final ImageButton ibSettings = dview.findViewById(R.id.ibSettings);
-        final CheckBox cbResize = dview.findViewById(R.id.cbResize);
-        final ImageButton ibResize = dview.findViewById(R.id.ibResize);
-        final Spinner spResize = dview.findViewById(R.id.spResize);
-        final CheckBox cbResizeWidthOnly = dview.findViewById(R.id.cbResizeWidthOnly);
-        final TextView tvResize = dview.findViewById(R.id.tvResize);
-        final TextView tvResizeRemark = dview.findViewById(R.id.tvResizeRemark);
-        final CheckBox cbPrivacy = dview.findViewById(R.id.cbPrivacy);
-        final CheckBox cbNotAgain = dview.findViewById(R.id.cbNotAgain);
-        final TextView tvNotAgain = dview.findViewById(R.id.tvNotAgain);
-
-        ivType.setImageResource(title == R.string.title_attachment_photo
+        int typeIconRes = (title == R.string.title_attachment_photo
                 ? R.drawable.twotone_photo_camera_24 : R.drawable.twotone_image_24);
-        rgAction.check(add_inline ? R.id.rbInline : R.id.rbAttach);
-        cbResize.setChecked(resize_images);
-        spResize.setEnabled(resize_images);
-        cbResizeWidthOnly.setEnabled(resize_images);
-        cbResizeWidthOnly.setChecked(resize_width_only);
-        tvResizeRemark.setText(getString(R.string.title_add_image_resize_remark, "JPEG, PNG, WebP"));
-        cbPrivacy.setChecked(privacy_images);
-
-        final int[] resizeValues = getResources().getIntArray(R.array.resizeValues);
-        for (int pos = 0; pos < resizeValues.length; pos++)
-            if (resizeValues[pos] == resize) {
-                spResize.setSelection(pos);
-                tvResize.setText(getString(R.string.title_add_resize_pixels, resizeValues[pos]));
-                break;
-            }
-
-        rgAction.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(RadioGroup group, int checkedId) {
-                prefs.edit().putBoolean("add_inline", checkedId == R.id.rbInline).apply();
-            }
-        });
 
         // https://developer.android.com/reference/android/provider/MediaStore#ACTION_PICK_IMAGES_SETTINGS
-        PackageManager pm = getContext().getPackageManager();
-        Intent settings = new Intent(MediaStore.ACTION_PICK_IMAGES_SETTINGS);
-        ibSettings.setVisibility(settings.resolveActivity(pm) == null ? View.GONE : View.VISIBLE);
-        ibSettings.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                v.getContext().startActivity(settings);
-            }
-        });
+        PackageManager pm = context.getPackageManager();
+        final Intent settings = new Intent(MediaStore.ACTION_PICK_IMAGES_SETTINGS);
+        boolean hasSettings = settings.resolveActivity(pm) != null;
 
-        cbResize.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                prefs.edit().putBoolean("resize_images", isChecked).apply();
-                spResize.setEnabled(isChecked);
-                cbResizeWidthOnly.setEnabled(isChecked);
-            }
-        });
+        String[] resizeNamesArray = getResources().getStringArray(R.array.resizeNames);
+        List<String> resizeNames = Arrays.asList(resizeNamesArray);
+        final int[] resizeValuesArray = getResources().getIntArray(R.array.resizeValues);
+        List<Integer> resizeValues = new ArrayList<>();
+        int selectedIndex = 0;
+        for (int pos = 0; pos < resizeValuesArray.length; pos++) {
+            resizeValues.add(resizeValuesArray[pos]);
+            if (resizeValuesArray[pos] == resize)
+                selectedIndex = pos;
+        }
 
-        ibResize.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Helper.viewFAQ(v.getContext(), 63);
-            }
-        });
+        final DialogAddImageView dialogView = new DialogAddImageView(
+                context,
+                title,
+                typeIconRes,
+                add_inline,
+                hasSettings,
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        context.startActivity(settings);
+                    }
+                },
+                resize_images,
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        Helper.viewFAQ(context, 63);
+                    }
+                },
+                resizeNames,
+                resizeValues,
+                selectedIndex,
+                resize_width_only,
+                privacy_images,
+                !image_dialog
+        );
 
-        spResize.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> adapterView, View view, int position, long id) {
-                prefs.edit().putInt("resize", resizeValues[position]).apply();
-                tvResize.setText(getString(R.string.title_add_resize_pixels, resizeValues[position]));
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-                prefs.edit().remove("resize").apply();
-            }
-        });
-
-        cbResizeWidthOnly.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                prefs.edit().putBoolean("resize_width_only", isChecked).apply();
-            }
-        });
-
-        cbPrivacy.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                prefs.edit().putBoolean("privacy_images", isChecked).apply();
-            }
-        });
-
-        cbNotAgain.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                prefs.edit().putBoolean("image_dialog", !isChecked).apply();
-                tvNotAgain.setVisibility(isChecked ? View.VISIBLE : View.GONE);
-            }
-        });
-
-        cbNotAgain.setChecked(!image_dialog);
-        tvNotAgain.setVisibility(cbNotAgain.isChecked() ? View.VISIBLE : View.GONE);
-
-        return new AlertDialog.Builder(getContext())
-                .setView(dview)
+        return new AlertDialog.Builder(context)
+                .setView(dialogView.getComposeView())
                 .setNegativeButton(android.R.string.cancel, null)
                 .setPositiveButton(title,
                         new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
+                                prefs.edit()
+                                        .putBoolean("add_inline", dialogView.isAddInline())
+                                        .putBoolean("resize_images", dialogView.isResizeImages())
+                                        .putInt("resize", dialogView.getSelectedResize())
+                                        .putBoolean("resize_width_only", dialogView.isResizeWidthOnly())
+                                        .putBoolean("privacy_images", dialogView.isPrivacyImages())
+                                        .putBoolean("image_dialog", !dialogView.isNotAgain())
+                                        .apply();
                                 sendResult(RESULT_OK);
                             }
                         })
