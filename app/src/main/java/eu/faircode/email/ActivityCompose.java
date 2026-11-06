@@ -31,6 +31,8 @@ import android.os.Bundle;
 import android.text.Html;
 import android.text.Spanned;
 import android.text.TextUtils;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 
 import androidx.core.app.TaskStackBuilder;
 import androidx.core.net.MailTo;
@@ -55,7 +57,11 @@ public class ActivityCompose extends ActivityBase implements FragmentManager.OnB
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_compose);
+        FrameLayout frame = new FrameLayout(this);
+        frame.setId(R.id.content_frame);
+        setContentView(frame, new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
 
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
