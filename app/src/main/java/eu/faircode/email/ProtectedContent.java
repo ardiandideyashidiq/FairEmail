@@ -32,28 +32,17 @@ import android.text.Editable;
 import android.text.Spannable;
 import android.text.Spanned;
 import android.text.TextUtils;
-import android.text.TextWatcher;
 import android.text.method.ArrowKeyMovementMethod;
 import android.text.style.URLSpan;
 import android.util.Base64;
-import android.view.GestureDetector;
-import android.view.KeyEvent;
-import android.view.LayoutInflater;
-import android.view.MotionEvent;
 import android.view.View;
-import android.view.WindowManager;
-import android.view.inputmethod.EditorInfo;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.ContextCompat;
-import androidx.lifecycle.LifecycleOwner;
-
-import com.google.android.material.textfield.TextInputLayout;
 
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -162,43 +151,77 @@ public class ProtectedContent {
             Bundle args = getArguments();
 
             final Context context = getContext();
-            final View view = LayoutInflater.from(context).inflate(R.layout.dialog_decrypt, null);
-            final TextInputLayout tilPassword = view.findViewById(R.id.tilPassword);
-            final Button btnDecrypt = view.findViewById(R.id.btnDecrypt);
-            final TextView tvContent = view.findViewById(R.id.tvContent);
-            final TextView tvError = view.findViewById(R.id.tvError);
-            final TextView tvErrorDetail = view.findViewById(R.id.tvErrorDetail);
+            final TextView tvContent = new TextView(context);
+            tvContent.setTextAppearance(context, androidx.appcompat.R.style.TextAppearance_AppCompat_Medium);
 
-            tilPassword.setVisibility(View.VISIBLE);
-            btnDecrypt.setVisibility(View.VISIBLE);
-            tvContent.setVisibility(View.GONE);
-            tvError.setVisibility(View.GONE);
-            tvErrorDetail.setVisibility(View.GONE);
+            final DialogDecryptView[] decryptViewHolder = new DialogDecryptView[1];
+            final String initialPassword = args.getString("password");
 
-            String password = args.getString("password");
-            tilPassword.getEditText().setText(password);
-            btnDecrypt.setEnabled(!TextUtils.isEmpty(password));
+            decryptViewHolder[0] = new DialogDecryptView(
+                    context,
+                    initialPassword,
+                    new kotlin.jvm.functions.Function1<String, kotlin.Unit>() {
+                        @Override
+                        public kotlin.Unit invoke(String pwd) {
+                            args.putString("password", pwd);
+                            return kotlin.Unit.INSTANCE;
+                        }
+                    },
+                    new kotlin.jvm.functions.Function0<kotlin.Unit>() {
+                        @Override
+                        public kotlin.Unit invoke() {
+                            new SimpleTask<Spanned>() {
+                                @Override
+                                protected void onPreExecute(Bundle args) {
+                                    decryptViewHolder[0].setInputEnabled(false);
+                                    decryptViewHolder[0].setDecryptEnabled(false);
+                                    decryptViewHolder[0].setError(null, null);
+                                }
 
-            tilPassword.getEditText().addTextChangedListener(new TextWatcher() {
-                @Override
-                public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-                    // Do nothing
-                }
+                                @Override
+                                protected void onPostExecute(Bundle args) {
+                                    decryptViewHolder[0].setInputEnabled(true);
+                                    decryptViewHolder[0].setDecryptEnabled(true);
+                                }
 
-                @Override
-                public void onTextChanged(CharSequence s, int start, int before, int count) {
-                    // Do nothing
-                }
+                                @Override
+                                protected Spanned onExecute(Context context, Bundle args) throws Throwable {
+                                    Uri uri = args.getParcelable("uri");
+                                    String password = args.getString("password");
 
-                @Override
-                public void afterTextChanged(Editable s) {
-                    String password = s.toString();
-                    btnDecrypt.setEnabled(!TextUtils.isEmpty(password));
-                    args.putString("password", password);
-                }
-            });
+                                    String html = ProtectedContent.fromUri(context, uri, password);
 
-            btnDecrypt.setEnabled(false);
+                                    Document d = JsoupEx.parse(html);
+                                    d = HtmlHelper.sanitizeView(context, d, true);
+                                    return HtmlHelper.fromDocument(context, d, new HtmlHelper.ImageGetterEx() {
+                                        @Override
+                                        public Drawable getDrawable(Element element) {
+                                            return ImageHelper.decodeImage(context,
+                                                    -1, element, true, 0, 1.0f, tvContent);
+                                        }
+                                    }, null);
+                                }
+
+                                @Override
+                                protected void onExecuted(Bundle args, Spanned content) {
+                                    decryptViewHolder[0].setInputVisible(false);
+                                    tvContent.setText(content);
+                                    decryptViewHolder[0].setContentVisible(true);
+                                }
+
+                                @Override
+                                protected void onException(Bundle args, Throwable ex) {
+                                    decryptViewHolder[0].setError(
+                                            new ThrowableWrapper(ex).getSafeMessage(),
+                                            new ThrowableWrapper(ex).toSafeString()
+                                    );
+                                }
+                            }.execute(FragmentDialogDecrypt.this, args, "decypt");
+                            return kotlin.Unit.INSTANCE;
+                        }
+                    },
+                    tvContent
+            );
 
             tvContent.setMovementMethod(new ArrowKeyMovementMethod() {
                 private GestureDetector gestureDetector = new GestureDetector(context,
@@ -246,82 +269,17 @@ public class ProtectedContent {
                 }
             });
 
-            btnDecrypt.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    new SimpleTask<Spanned>() {
-                        @Override
-                        protected void onPreExecute(Bundle args) {
-                            tilPassword.setEnabled(false);
-                            btnDecrypt.setEnabled(false);
-                            tvError.setVisibility(View.GONE);
-                            tvErrorDetail.setVisibility(View.GONE);
-                        }
-
-                        @Override
-                        protected void onPostExecute(Bundle args) {
-                            tilPassword.setEnabled(true);
-                            btnDecrypt.setEnabled(true);
-                        }
-
-                        @Override
-                        protected Spanned onExecute(Context context, Bundle args) throws Throwable {
-                            Uri uri = args.getParcelable("uri");
-                            String password = args.getString("password");
-
-                            String html = ProtectedContent.fromUri(context, uri, password);
-
-                            Document d = JsoupEx.parse(html);
-                            d = HtmlHelper.sanitizeView(context, d, true);
-                            return HtmlHelper.fromDocument(context, d, new HtmlHelper.ImageGetterEx() {
-                                @Override
-                                public Drawable getDrawable(Element element) {
-                                    return ImageHelper.decodeImage(context,
-                                            -1, element, true, 0, 1.0f, tvContent);
-                                }
-                            }, null);
-                        }
-
-                        @Override
-                        protected void onExecuted(Bundle args, Spanned content) {
-                            tilPassword.setVisibility(View.GONE);
-                            btnDecrypt.setVisibility(View.GONE);
-                            tvContent.setText(content);
-                            tvContent.setVisibility(View.VISIBLE);
-                        }
-
-                        @Override
-                        protected void onException(Bundle args, Throwable ex) {
-                            tvError.setText(new ThrowableWrapper(ex).getSafeMessage());
-                            tvErrorDetail.setText(new ThrowableWrapper(ex).toSafeString());
-                            tvError.setVisibility(View.VISIBLE);
-                            tvErrorDetail.setVisibility(View.VISIBLE);
-                        }
-                    }.execute(FragmentDialogDecrypt.this, args, "decypt");
-                }
-            });
-
-            tilPassword.getEditText().setOnEditorActionListener(new TextView.OnEditorActionListener() {
-                @Override
-                public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                    if (actionId == EditorInfo.IME_ACTION_DONE) {
-                        btnDecrypt.performClick();
-                        return true;
-                    } else
-                        return false;
-                }
-            });
-
-            if (!TextUtils.isEmpty(password))
-                btnDecrypt.post(new Runnable() {
+            if (!TextUtils.isEmpty(initialPassword)) {
+                decryptViewHolder[0].getComposeView().post(new Runnable() {
                     @Override
                     public void run() {
-                        btnDecrypt.performClick();
+                        decryptViewHolder[0].performDecrypt();
                     }
                 });
+            }
 
             Dialog dialog = new AlertDialog.Builder(context)
-                    .setView(view)
+                    .setView(decryptViewHolder[0].getComposeView())
                     .setNegativeButton(android.R.string.cancel, null)
                     .create();
 
