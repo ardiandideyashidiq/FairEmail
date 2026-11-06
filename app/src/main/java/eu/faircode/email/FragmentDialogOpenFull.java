@@ -29,7 +29,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
-
+import android.widget.FrameLayout;
 import androidx.annotation.Nullable;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -65,8 +65,9 @@ public class FragmentDialogOpenFull extends FragmentDialogBase {
 
         final Context context = getContext();
 
-        View view = inflater.inflate(R.layout.fragment_open_full, container, false);
-
+        FrameLayout view = new FrameLayout(context);
+        WebView wv = new WebView(context);
+        view.addView(wv, new FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT));
         ViewCompat.setOnApplyWindowInsetsListener(view, (v, windowInsets) -> {
             try {
                 Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -98,7 +99,6 @@ public class FragmentDialogOpenFull extends FragmentDialogBase {
             return WindowInsetsCompat.CONSUMED;
         });
 
-        WebView wv = view.findViewById(R.id.wv);
 
         WebSettings settings = wv.getSettings();
         settings.setUserAgentString(WebViewEx.getUserAgent(context, wv));
