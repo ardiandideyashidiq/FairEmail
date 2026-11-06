@@ -211,22 +211,22 @@ public class FragmentContacts extends FragmentBase {
                         if (context == null)
                             return;
 
-                        LayoutInflater inflater = LayoutInflater.from(context);
-                        View dview = inflater.inflate(R.layout.dialog_contact_delete, null);
-                        CheckBox cbNotAgain = dview.findViewById(R.id.cbNotAgain);
-
-                        cbNotAgain.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                            @Override
-                            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                                deleting = isChecked;
-                            }
-                        });
+                        final DialogAskAgainView askView = new DialogAskAgainView(
+                                context,
+                                context.getString(R.string.title_delete_contact),
+                                null,
+                                null,
+                                true,
+                                false,
+                                null
+                        );
 
                         new AlertDialog.Builder(context)
-                                .setView(dview)
+                                .setView(askView.getComposeView())
                                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
+                                        deleting = askView.isNotAgain();
                                         delete(id);
                                     }
                                 })
