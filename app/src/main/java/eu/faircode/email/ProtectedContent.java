@@ -39,11 +39,17 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.view.GestureDetector;
+import android.view.MotionEvent;
+import android.view.WindowManager;
+
+import androidx.appcompat.app.AlertDialog;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
+import androidx.lifecycle.LifecycleOwner;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 

@@ -330,16 +330,16 @@ class DialogInsertLinkView @JvmOverloads constructor(
         imageState.value = image
     }
 
+    @get:JvmName("getDLimit")
     val dlimit: Int
         get() = dlimitState.value
-
     fun setDLimit(limit: Int) {
         dlimitState.value = limit.coerceIn(0, 99)
     }
 
+    @get:JvmName("getTLimit")
     val tlimit: Int
         get() = tlimitState.value
-
     fun setTLimit(limit: Int) {
         tlimitState.value = limit.coerceIn(0, 52)
     }
