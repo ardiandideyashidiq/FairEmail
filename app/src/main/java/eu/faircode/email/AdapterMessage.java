@@ -6086,18 +6086,22 @@ public class AdapterMessage extends RecyclerView.Adapter<AdapterMessage.ViewHold
             if (open_full_confirmed && !junk)
                 onActionOpenFullConfirmed(message);
             else {
-                LayoutInflater inflater = LayoutInflater.from(context);
-                View dview = inflater.inflate(R.layout.dialog_ask_full, null, false);
-                final CheckBox cbNotAgain = dview.findViewById(R.id.cbNotAgain);
-
-                cbNotAgain.setVisibility(junk ? View.GONE : View.VISIBLE);
+                final DialogAskAgainView askAgainView = new DialogAskAgainView(
+                        context,
+                        context.getString(R.string.title_ask_show_html),
+                        context.getString(R.string.title_ask_show_image_hint),
+                        null,
+                        !junk,
+                        false,
+                        null
+                );
 
                 new AlertDialog.Builder(context)
-                        .setView(dview)
+                        .setView(askAgainView.getComposeView())
                         .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
-                                if (cbNotAgain.isChecked())
+                                if (askAgainView.isNotAgain())
                                     prefs.edit().putBoolean("open_full_confirmed", true).apply();
                                 onActionOpenFullConfirmed(message);
                             }
