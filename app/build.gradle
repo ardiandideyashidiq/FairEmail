@@ -1,6 +1,7 @@
 plugins {
     id 'com.android.application'
     id 'de.undercouch.download'
+    id 'org.jetbrains.kotlin.plugin.compose'
 }
 
 def getVersionCode = { -> return 2339 }
@@ -163,7 +164,7 @@ android {
     buildFeatures {
         aidl = true
         buildConfig = true
-        compose = false
+        compose = true
         prefab = false
         renderScript = false
         resValues = false
@@ -447,13 +448,14 @@ tasks.register('extractSignature', Exec) {
 
 tasks.register('upload', Exec) {
     // ./gradlew upload -Ptarget=play-preview
-    println "\nhttps://bitbucket.org/M66B/fairemail-test/downloads/FairEmail-v1." + getVersionCode() + getRevision() + "-" + target + "-release.apk\n"
+    def targetName = project.findProperty("target") ?: "play-preview"
+    println "\nhttps://bitbucket.org/M66B/fairemail-test/downloads/FairEmail-v1." + getVersionCode() + getRevision() + "-" + targetName + "-release.apk\n"
     workingDir "${rootDir}/app/build"
     commandLine 'curl',
             '-o', '/dev/null',
             '-X', 'POST', "https://M66B:" + localProperties.getProperty("bb.pwd", "") + "@api.bitbucket.org/2.0/repositories/M66B/fairemail-test/downloads",
-            '--form', "files=@${rootDir}/app/build/outputs/apk/" + target.split('-')[0] + "/release/FairEmail-v1." + getVersionCode() + getRevision() + "-" + target.split('-')[0] + "-release.apk;" +
-            "filename=FairEmail-v1." + getVersionCode() + getRevision() + "-" + target + "-release.apk"
+            '--form', "files=@${rootDir}/app/build/outputs/apk/" + targetName.split('-')[0] + "/release/FairEmail-v1." + getVersionCode() + getRevision() + "-" + targetName.split('-')[0] + "-release.apk;" +
+            "filename=FairEmail-v1." + getVersionCode() + getRevision() + "-" + targetName + "-release.apk"
 }
 
 configurations.configureEach {
@@ -845,4 +847,12 @@ dependencies {
 
     // https://developer.android.com/jetpack/androidx/releases/heifwriter
     implementation "androidx.heifwriter:heifwriter:$heifwriter_version"
+
+    def composeBom = platform('androidx.compose:compose-bom:2024.12.01')
+    implementation composeBom
+    implementation 'androidx.compose.ui:ui'
+    implementation 'androidx.compose.ui:ui-tooling-preview'
+    implementation 'androidx.compose.foundation:foundation'
+    implementation 'androidx.compose.material3:material3'
+    debugImplementation 'androidx.compose.ui:ui-tooling'
 }

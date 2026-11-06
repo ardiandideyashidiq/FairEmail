@@ -27,6 +27,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import androidx.compose.ui.platform.ComposeView;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
@@ -58,25 +59,15 @@ public class AdapterLog extends RecyclerView.Adapter<AdapterLog.ViewHolder> {
     private DateFormat TF;
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        private TextView tvTime;
-        private TextView tvData;
+        private ComposeView composeView;
 
-        ViewHolder(View itemView) {
+        ViewHolder(ComposeView itemView) {
             super(itemView);
-
-            tvTime = itemView.findViewById(R.id.tvTime);
-            tvData = itemView.findViewById(R.id.tvData);
+            this.composeView = itemView;
         }
 
         private void bindTo(EntityLog log) {
-            tvTime.setText(TF.format(log.time));
-            SpannableStringBuilder ssb = new SpannableStringBuilderEx(log.data);
-
-            Integer color = log.getColor(context);
-            if (color != null)
-                ssb.setSpan(new ForegroundColorSpan(color), 0, ssb.length(), 0);
-
-            tvData.setText(ssb);
+            LogItemBinder.bind(composeView, TF.format(log.time), log.data, log.getColor(context));
         }
     }
 
@@ -224,7 +215,7 @@ public class AdapterLog extends RecyclerView.Adapter<AdapterLog.ViewHolder> {
     @Override
     @NonNull
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        return new ViewHolder(inflater.inflate(R.layout.item_log, parent, false));
+        return new ViewHolder(LogItemBinder.createComposeView(parent));
     }
 
     @Override
