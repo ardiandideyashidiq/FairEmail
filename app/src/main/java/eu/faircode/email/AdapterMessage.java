@@ -7798,17 +7798,18 @@ public class AdapterMessage extends RecyclerView.Adapter<AdapterMessage.ViewHold
         }
 
         private void onMenuPin(TupleMessageEx message) {
-            View view = LayoutInflater.from(context).inflate(R.layout.dialog_shortcut_label, null);
-            EditText etLabel = view.findViewById(R.id.etLabel);
-
-            etLabel.setText(message.subject);
+            final SingleInputPromptView promptView = new SingleInputPromptView(
+                    context,
+                    R.string.title_pin_label,
+                    message.subject != null ? message.subject : ""
+            );
 
             new AlertDialog.Builder(context)
-                    .setView(view)
+                    .setView(promptView.getComposeView())
                     .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            String label = etLabel.getText().toString().trim();
+                            String label = promptView.getText().trim();
                             if (!TextUtils.isEmpty(label))
                                 _onMenuPin(message, label);
                         }
