@@ -485,26 +485,16 @@ public class FragmentDialogOpenLink extends FragmentDialogBase {
 
                     @Override
                     protected void onExecuted(Bundle args, String whois) {
-                        final View dview = LayoutInflater.from(context).inflate(R.layout.dialog_whois, null);
-                        final TextView tvHost = dview.findViewById(R.id.tvHost);
-                        final TextView tvWhois = dview.findViewById(R.id.tvWhois);
-                        final ImageButton ibInfo = dview.findViewById(R.id.ibInfo);
-
-                        tvWhois.setMovementMethod(LinkMovementMethodCompat.getInstance());
-
-                        ibInfo.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View v) {
-                                Uri uri = Uri.parse(Whois.WHOIS_INFO);
-                                Helper.view(v.getContext(), uri, true);
-                            }
-                        });
-
-                        tvHost.setText(args.getString("host"));
-                        tvWhois.setText(whois);
+                        String host = args.getString("host");
+                        final DialogWhoisView whoisView = new DialogWhoisView(
+                                context,
+                                host != null ? host : "",
+                                whois != null ? whois : "",
+                                () -> Helper.view(context, Uri.parse(Whois.WHOIS_INFO), true)
+                        );
 
                         new AlertDialog.Builder(getContext())
-                                .setView(dview)
+                                .setView(whoisView.getComposeView())
                                 .setPositiveButton(android.R.string.ok, null)
                                 .show();
                     }
