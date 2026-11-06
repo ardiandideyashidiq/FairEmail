@@ -91,15 +91,16 @@
 -dontwarn com.fasterxml.jackson.**
 
 #MSAL
--keep class com.microsoft.aad.adal.** {*;}
--keep class com.microsoft.identity.common.** {*;}
 -dontwarn com.nimbusds.jose.**
 -dontwarn org.bouncycastle.pkix.jcajce.**
 -keepclassmembers enum * {*;} #GSON
 
 #Bouncy castle
--keep class org.bouncycastle.** {*;}
--keepnames class org.bouncycastle.* {*;}
+-keep class org.bouncycastle.asn1.** {*;}
+-keep class org.bouncycastle.crypto.** {*;}
+-keep class org.bouncycastle.jcajce.** {*;}
+-keep class org.bouncycastle.jce.** {*;}
+-keep class org.bouncycastle.util.** {*;}
 -dontwarn org.bouncycastle.cert.dane.**
 -dontwarn org.bouncycastle.jce.provider.**
 -dontwarn org.bouncycastle.x509.util.**

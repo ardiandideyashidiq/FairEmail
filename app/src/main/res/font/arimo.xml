@@ -5,15 +5,15 @@
         app:fontStyle="normal"
         app:fontWeight="400" />
     <font
-        app:font="@font/arimo_italic"
+        app:font="@font/arimo_regular"
         app:fontStyle="italic"
         app:fontWeight="400" />
     <font
-        app:font="@font/arimo_bold"
+        app:font="@font/arimo_regular"
         app:fontStyle="normal"
         app:fontWeight="700" />
     <font
-        app:font="@font/arimo_bolditalic"
+        app:font="@font/arimo_regular"
         app:fontStyle="italic"
         app:fontWeight="700" />
 </font-family>

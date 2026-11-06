@@ -324,158 +324,8 @@ public class FragmentSetup extends FragmentBase implements SharedPreferences.OnS
         btnQuick.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                final Context context = v.getContext();
-
-                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-                boolean debug = (prefs.getBoolean("debug", false) || BuildConfig.DEBUG);
-
-                PopupMenuLifecycle popupMenu = new PopupMenuLifecycle(context, getViewLifecycleOwner(), btnQuick);
-                Menu menu = popupMenu.getMenu();
-
-                List<EmailProvider> providers = EmailProvider.getProviders(context, debug);
-
-                int order = 1;
-
-                // OAuth
-                order = getMenuItems(menu, context, providers, order, false, debug);
-
-                menu.add(Menu.NONE, R.string.title_setup_other, order++, R.string.title_setup_other)
-                        .setIcon(R.drawable.twotone_auto_fix_high_24);
-
-                // Gmail / account manager
-                {
-                    Resources res = context.getResources();
-                    String pkg = context.getPackageName();
-
-                    String gmail = getString(R.string.title_setup_android, getString(R.string.title_setup_gmail));
-                    SpannableString ss = new SpannableString(gmail);
-                    ss.setSpan(new RelativeSizeSpan(HtmlHelper.FONT_SMALL), 0, ss.length(), 0);
-                    MenuItem item = menu.add(Menu.FIRST, R.string.title_setup_gmail, order++, ss);
-                    int resid = res.getIdentifier("provider_gmail", "drawable", pkg);
-                    if (resid != 0)
-                        item.setIcon(resid);
-                }
-
-                order = getMenuItems(menu, context, providers, order, true, debug);
-
-                SpannableString imap = new SpannableString(getString(R.string.title_setup_imap));
-                imap.setSpan(new RelativeSizeSpan(HtmlHelper.FONT_SMALL), 0, imap.length(), 0);
-                menu.add(Menu.FIRST, R.string.title_setup_imap, order++, imap);
-
-                SpannableString pop3 = new SpannableString(getString(R.string.title_setup_pop3));
-                pop3.setSpan(new RelativeSizeSpan(HtmlHelper.FONT_SMALL), 0, pop3.length(), 0);
-                menu.add(Menu.FIRST, R.string.title_setup_pop3, order++, pop3);
-
-                popupMenu.insertIcons(context);
-
-                MenuCompat.setGroupDividerEnabled(menu, true);
-
-                popupMenu.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-                    @Override
-                    public boolean onMenuItemClick(MenuItem item) {
-                        LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(getContext());
-
-                        int itemId = item.getItemId();
-                        if (itemId == R.string.title_setup_gmail) {
-                            if (Helper.hasValidFingerprint(getContext()) || BuildConfig.DEBUG)
-                                lbm.sendBroadcast(new Intent(ActivitySetup.ACTION_QUICK_GMAIL));
-                            else
-                                new AlertDialog.Builder(getContext())
-                                        .setIcon(R.drawable.twotone_info_24)
-                                        .setTitle(item.getTitle())
-                                        .setMessage(R.string.title_setup_gmail_support)
-                                        .setNeutralButton(R.string.title_info, new DialogInterface.OnClickListener() {
-                                            @Override
-                                            public void onClick(DialogInterface dialog, int which) {
-                                                Helper.viewFAQ(getContext(), 6);
-                                            }
-                                        })
-                                        .setNegativeButton(android.R.string.cancel, null)
-                                        .show();
-                            return true;
-                        } else if (itemId == R.string.title_setup_other) {
-                            lbm.sendBroadcast(new Intent(ActivitySetup.ACTION_QUICK_SETUP)
-                                    .putExtra("title", itemId));
-                            return true;
-                        } else if (itemId == R.string.title_setup_imap) {
-                            ibManual.setPressed(true);
-                            ibManual.setPressed(false);
-                            manual = true;
-                            updateManual();
-                            view.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        scrollTo(R.id.ibManual, 0);
-                                    } catch (Throwable ex) {
-                                        Log.e(ex);
-                                    }
-                                }
-                            });
-                            return true;
-                        } else if (itemId == R.string.title_setup_pop3) {
-                            lbm.sendBroadcast(new Intent(ActivitySetup.ACTION_QUICK_POP3));
-                            return true;
-                        } else if (itemId == R.string.menu_faq) {
-                            Helper.view(getContext(), Helper.getSupportUri(getContext(), "Providers:support"), false);
-                            return true;
-                        }
-
-                        if (item.getIntent() == null)
-                            return false;
-                        else {
-                            if (Helper.hasValidFingerprint(getContext()) || BuildConfig.DEBUG)
-                                lbm.sendBroadcast(item.getIntent());
-                            else
-                                new AlertDialog.Builder(getContext())
-                                        .setIcon(R.drawable.twotone_info_24)
-                                        .setTitle(item.getTitle())
-                                        .setMessage(R.string.title_setup_oauth_permission)
-                                        .setNeutralButton(R.string.title_info, new DialogInterface.OnClickListener() {
-                                            @Override
-                                            public void onClick(DialogInterface dialog, int which) {
-                                                Helper.viewFAQ(getContext(), 147);
-                                            }
-                                        })
-                                        .setNegativeButton(android.R.string.cancel, null)
-                                        .show();
-                            return true;
-                        }
-                    }
-                });
-
-                popupMenu.show();
-            }
-
-            private int getMenuItems(Menu menu, Context context, List<EmailProvider> providers, int order, boolean alt, boolean debug) {
-                Resources res = context.getResources();
-                String pkg = context.getPackageName();
-
-                for (EmailProvider provider : providers)
-                    if (provider.oauth != null &&
-                            (provider.oauth.enabled || (provider.debug && debug)) &&
-                            !TextUtils.isEmpty(provider.oauth.clientId) &&
-                            provider.alt == alt) {
-                        String title = getString(R.string.title_setup_oauth, provider.description);
-                        SpannableString ss = new SpannableString(title);
-                        if (provider.alt)
-                            ss.setSpan(new RelativeSizeSpan(HtmlHelper.FONT_SMALL), 0, ss.length(), 0);
-                        MenuItem item = menu
-                                .add(alt ? Menu.FIRST : Menu.NONE, -1, order++, ss)
-                                .setIntent(new Intent(ActivitySetup.ACTION_QUICK_OAUTH)
-                                        .putExtra("id", provider.id)
-                                        .putExtra("name", provider.description)
-                                        .putExtra("privacy", provider.oauth.privacy)
-                                        .putExtra("askAccount", provider.oauth.askAccount)
-                                        .putExtra("askTenant", (provider.graph == null && provider.oauth.askTenant()))
-                                        .putExtra("pop", provider.pop != null));
-                        // https://developers.google.com/identity/branding-guidelines
-                        int resid = res.getIdentifier("provider_" + provider.id, "drawable", pkg);
-                        if (resid != 0)
-                            item.setIcon(resid);
-                    }
-
-                return order;
+                LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(getContext());
+                lbm.sendBroadcast(new Intent(ActivitySetup.ACTION_QUICK_GMAIL));
             }
         });
 
@@ -976,15 +826,7 @@ public class FragmentSetup extends FragmentBase implements SharedPreferences.OnS
                 btnInbox.setEnabled(done);
                 btnInbox.setTypeface(done ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
 
-                boolean outlook = false;
-                if (accounts != null)
-                    for (EntityAccount account : accounts)
-                        if (account.isOutlook()) {
-                            outlook = true;
-                            break;
-                        }
-
-                grpGraphContacts.setVisibility(outlook ? View.VISIBLE : View.GONE);
+                grpGraphContacts.setVisibility(View.GONE);
 
                 prefs.edit().putBoolean("has_accounts", done).apply();
             }
@@ -1472,11 +1314,7 @@ public class FragmentSetup extends FragmentBase implements SharedPreferences.OnS
     private final SimpleTask<Integer> taskGraph = new SimpleTask<Integer>() {
         @Override
         protected Integer onExecute(Context context, Bundle args) throws Throwable {
-            long account = args.getLong("account");
-            String json = args.getString("authState");
-            AuthState authState = AuthState.jsonDeserialize(json);
-
-            return MicrosoftGraph.downloadContacts(context, account, authState);
+            return 0;
         }
 
         @Override

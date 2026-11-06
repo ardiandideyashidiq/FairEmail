@@ -75,10 +75,6 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 import org.jsoup.select.Elements;
-import org.simplejavamail.outlookmessageparser.OutlookMessageParser;
-import org.simplejavamail.outlookmessageparser.model.OutlookAttachment;
-import org.simplejavamail.outlookmessageparser.model.OutlookFileAttachment;
-import org.simplejavamail.outlookmessageparser.model.OutlookMessage;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -4557,11 +4553,7 @@ public class MessageHelper {
                     else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && local.isCompressed()) {
                         decodeCompressed(context, local, 1);
 
-                    } else if (Helper.isTnef(local.type, local.name))
-                        decodeTNEF(context, local, 1);
-
-                    else if ("msg".equalsIgnoreCase(Helper.getExtension(local.name)))
-                        decodeOutlook(context, local, 1);
+                    }
                 }
             }
         }
@@ -4611,8 +4603,6 @@ public class MessageHelper {
 
                         db.attachment().setDownloaded(epart.attachment.id, efile.length());
 
-                        if (Helper.isTnef(epart.attachment.type, epart.attachment.name))
-                            subsequence = decodeTNEF(context, epart.attachment, subsequence);
 
                     } catch (Throwable ex) {
                         Log.w(ex);
@@ -4849,249 +4839,10 @@ public class MessageHelper {
         }
 
         private int decodeTNEF(Context context, EntityAttachment local, int subsequence) {
-            try {
-                DB db = DB.getInstance(context);
-
-                // https://poi.apache.org/components/hmef/index.html
-                File file = local.getFile(context);
-                org.apache.poi.hmef.HMEFMessage msg = new org.apache.poi.hmef.HMEFMessage(new FileInputStream(file));
-
-                String subject = msg.getSubject();
-                if (!TextUtils.isEmpty(subject)) {
-                    EntityAttachment attachment = new EntityAttachment();
-                    attachment.message = local.message;
-                    attachment.sequence = local.sequence;
-                    attachment.subsequence = subsequence++;
-                    attachment.name = "subject.txt";
-                    attachment.type = "text/plain";
-                    attachment.disposition = Part.ATTACHMENT;
-                    attachment.id = db.attachment().insertAttachment(attachment);
-
-                    try {
-                        Helper.writeText(attachment.getFile(context), subject);
-                        db.attachment().setDownloaded(attachment.id, (long) subject.length());
-                    } catch (Throwable ex) {
-                        Log.e(ex);
-                        db.attachment().setError(attachment.id, Log.formatThrowable(ex));
-                    }
-                }
-
-                String body = msg.getBody();
-                if (TextUtils.isEmpty(body)) {
-                    org.apache.poi.hmef.attribute.MAPIAttribute attr =
-                            msg.getMessageMAPIAttribute(org.apache.poi.hsmf.datatypes.MAPIProperty.BODY_HTML);
-                    if (attr == null)
-                        attr = msg.getMessageMAPIAttribute(org.apache.poi.hsmf.datatypes.MAPIProperty.BODY);
-                    if (attr != null) {
-                        EntityAttachment attachment = new EntityAttachment();
-                        attachment.message = local.message;
-                        attachment.sequence = local.sequence;
-                        attachment.subsequence = subsequence++;
-                        if (attr.getProperty().equals(org.apache.poi.hsmf.datatypes.MAPIProperty.BODY_HTML)) {
-                            attachment.name = "body.html";
-                            attachment.type = "text/html";
-                        } else {
-                            attachment.name = "body.txt";
-                            attachment.type = "text/plain";
-                        }
-                        attachment.disposition = Part.ATTACHMENT;
-                        attachment.id = db.attachment().insertAttachment(attachment);
-
-                        try {
-                            byte[] data = attr.getData();
-                            Helper.writeText(attachment.getFile(context), new String(data));
-                            db.attachment().setDownloaded(attachment.id, (long) data.length);
-                        } catch (Throwable ex) {
-                            Log.e(ex);
-                            db.attachment().setError(attachment.id, Log.formatThrowable(ex));
-                        }
-                    }
-                } else {
-                    EntityAttachment attachment = new EntityAttachment();
-                    attachment.message = local.message;
-                    attachment.sequence = local.sequence;
-                    attachment.subsequence = subsequence++;
-                    attachment.name = "body.rtf";
-                    attachment.type = "application/rtf";
-                    attachment.disposition = Part.ATTACHMENT;
-                    attachment.id = db.attachment().insertAttachment(attachment);
-
-                    try {
-                        Helper.writeText(attachment.getFile(context), body);
-                        db.attachment().setDownloaded(attachment.id, (long) body.length());
-                    } catch (Throwable ex) {
-                        Log.e(ex);
-                        db.attachment().setError(attachment.id, Log.formatThrowable(ex));
-                    }
-                }
-
-                for (org.apache.poi.hmef.Attachment at : msg.getAttachments()) {
-                    String filename = at.getLongFilename();
-                    if (filename == null)
-                        filename = at.getFilename();
-                    if (filename == null) {
-                        String ext = at.getExtension();
-                        if (ext != null)
-                            filename = "document." + ext;
-                    }
-
-                    EntityAttachment attachment = new EntityAttachment();
-                    attachment.message = local.message;
-                    attachment.sequence = local.sequence;
-                    attachment.subsequence = subsequence++;
-                    attachment.name = filename;
-                    attachment.type = Helper.guessMimeType(attachment.name);
-                    attachment.disposition = Part.ATTACHMENT;
-                    attachment.id = db.attachment().insertAttachment(attachment);
-
-                    try {
-                        byte[] data = at.getContents();
-                        try (OutputStream os = new FileOutputStream(attachment.getFile(context))) {
-                            os.write(data);
-                        }
-
-                        db.attachment().setDownloaded(attachment.id, (long) data.length);
-                    } catch (Throwable ex) {
-                        // java.lang.IllegalArgumentException: Attachment corrupt - no Data section
-                        Log.e(ex);
-                        db.attachment().setError(attachment.id, Log.formatThrowable(ex));
-                    }
-                }
-
-                StringBuilder sb = new StringBuilder();
-                for (org.apache.poi.hmef.attribute.TNEFAttribute attr : msg.getMessageAttributes())
-                    sb.append(attr.toString()).append("\r\n");
-                for (org.apache.poi.hmef.attribute.MAPIAttribute attr : msg.getMessageMAPIAttributes())
-                    if (!org.apache.poi.hsmf.datatypes.MAPIProperty.RTF_COMPRESSED.equals(attr.getProperty()) &&
-                            !org.apache.poi.hsmf.datatypes.MAPIProperty.BODY_HTML.equals(attr.getProperty()))
-                        sb.append(attr.toString()).append("\r\n");
-                if (sb.length() > 0) {
-                    EntityAttachment attachment = new EntityAttachment();
-                    attachment.message = local.message;
-                    attachment.sequence = local.sequence;
-                    attachment.subsequence = subsequence++;
-                    attachment.name = "attributes.txt";
-                    attachment.type = "text/plain";
-                    attachment.disposition = Part.ATTACHMENT;
-                    attachment.id = db.attachment().insertAttachment(attachment);
-
-                    try {
-                        Helper.writeText(attachment.getFile(context), sb.toString());
-                        db.attachment().setDownloaded(attachment.id, (long) sb.length());
-                    } catch (Throwable ex) {
-                        Log.e(ex);
-                        db.attachment().setError(attachment.id, Log.formatThrowable(ex));
-                    }
-                }
-            } catch (Throwable ex) {
-                Log.w(ex);
-            }
-
             return subsequence;
         }
 
         private int decodeOutlook(Context context, EntityAttachment local, int subsequence) {
-            try {
-                DB db = DB.getInstance(context);
-
-                // https://poi.apache.org/components/hmef/index.html
-                File file = local.getFile(context);
-                OutlookMessage msg = new OutlookMessageParser().parseMsg(file);
-
-                String headers = msg.getHeaders();
-                if (!TextUtils.isEmpty(headers)) {
-                    EntityAttachment attachment = new EntityAttachment();
-                    attachment.message = local.message;
-                    attachment.sequence = local.sequence;
-                    attachment.subsequence = subsequence++;
-                    attachment.name = "headers.txt";
-                    attachment.type = "text/rfc822-headers";
-                    attachment.disposition = Part.ATTACHMENT;
-                    attachment.id = db.attachment().insertAttachment(attachment);
-
-                    Helper.writeText(attachment.getFile(context), headers);
-                    db.attachment().setDownloaded(attachment.id, (long) headers.length());
-                }
-
-                String html = msg.getBodyHTML();
-                if (!TextUtils.isEmpty(html)) {
-                    EntityAttachment attachment = new EntityAttachment();
-                    attachment.message = local.message;
-                    attachment.sequence = local.sequence;
-                    attachment.subsequence = subsequence++;
-                    attachment.name = "body.html";
-                    attachment.type = "text/html";
-                    attachment.disposition = Part.ATTACHMENT;
-                    attachment.id = db.attachment().insertAttachment(attachment);
-
-                    File a = attachment.getFile(context);
-                    Helper.writeText(a, html);
-                    db.attachment().setDownloaded(attachment.id, a.length());
-                }
-
-                if (TextUtils.isEmpty(html)) {
-                    String text = msg.getBodyText();
-                    if (!TextUtils.isEmpty(text)) {
-                        EntityAttachment attachment = new EntityAttachment();
-                        attachment.message = local.message;
-                        attachment.sequence = local.sequence;
-                        attachment.subsequence = subsequence++;
-                        attachment.name = "body.txt";
-                        attachment.type = "text/plain";
-                        attachment.disposition = Part.ATTACHMENT;
-                        attachment.id = db.attachment().insertAttachment(attachment);
-
-                        File a = attachment.getFile(context);
-                        Helper.writeText(a, text);
-                        db.attachment().setDownloaded(attachment.id, a.length());
-                    }
-                }
-
-                String rtf = msg.getBodyRTF();
-                if (!TextUtils.isEmpty(rtf)) {
-                    EntityAttachment attachment = new EntityAttachment();
-                    attachment.message = local.message;
-                    attachment.sequence = local.sequence;
-                    attachment.subsequence = subsequence++;
-                    attachment.name = "body.rtf";
-                    attachment.type = "application/rtf";
-                    attachment.disposition = Part.ATTACHMENT;
-                    attachment.id = db.attachment().insertAttachment(attachment);
-
-                    File a = attachment.getFile(context);
-                    Helper.writeText(a, rtf);
-                    db.attachment().setDownloaded(attachment.id, a.length());
-                }
-
-                List<OutlookAttachment> attachments = msg.getOutlookAttachments();
-                for (OutlookAttachment oa : attachments)
-                    if (oa instanceof OutlookFileAttachment) {
-                        OutlookFileAttachment ofa = (OutlookFileAttachment) oa;
-
-                        EntityAttachment attachment = new EntityAttachment();
-                        attachment.message = local.message;
-                        attachment.sequence = local.sequence;
-                        attachment.subsequence = subsequence++;
-                        attachment.name = ofa.getFilename();
-                        attachment.type = ofa.getMimeTag();
-                        attachment.disposition = Part.ATTACHMENT;
-                        attachment.id = db.attachment().insertAttachment(attachment);
-
-                        if (TextUtils.isEmpty(attachment.type))
-                            attachment.type = Helper.guessMimeType(attachment.name);
-
-                        byte[] data = ofa.getData();
-                        try (OutputStream os = new FileOutputStream(attachment.getFile(context))) {
-                            os.write(data);
-                        }
-
-                        db.attachment().setDownloaded(attachment.id, (long) data.length);
-                    }
-
-            } catch (Throwable ex) {
-                Log.w(ex);
-            }
-
             return subsequence;
         }
 

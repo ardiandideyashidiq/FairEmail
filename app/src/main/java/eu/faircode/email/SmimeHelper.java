@@ -46,19 +46,7 @@ import javax.mail.internet.InternetAddress;
 
 public class SmimeHelper {
     static boolean hasSmimeKey(Context context, List<Address> recipients, boolean all) {
-        if (recipients == null || recipients.size() == 0)
-            return false;
-
-        int count = 0;
-        DB db = DB.getInstance(context);
-        for (Address address : recipients) {
-            String email = ((InternetAddress) address).getAddress();
-            List<EntityCertificate> certs = db.certificate().getCertificateByEmail(email);
-            if (certs != null && certs.size() > 0)
-                count++;
-        }
-
-        return (all ? count == recipients.size() : count > 0);
+        return false;
     }
 
     static boolean match(PrivateKey privkey, X509Certificate cert) {
@@ -71,31 +59,7 @@ public class SmimeHelper {
     }
 
     private static List<X509Certificate> readCACertificates(Context context) throws CertificateException, IOException {
-        List<X509Certificate> result = new ArrayList<>();
-
-        CertificateFactory fact = CertificateFactory.getInstance("X.509");
-        for (String name : context.getAssets().list("smime"))
-            if (name.endsWith(".pem")) {
-                Log.i("S/MIME reading=" + name);
-                int count = 0;
-                try (InputStream is = context.getAssets().open("smime/" + name)) {
-                    try (PemReader reader = new PemReader(new InputStreamReader(is))) {
-                        PemObject pem = reader.readPemObject();
-                        while (pem != null) {
-                            count++;
-                            ByteArrayInputStream bis = new ByteArrayInputStream(pem.getContent());
-                            X509Certificate cert = (X509Certificate) fact.generateCertificate(bis);
-                            //Log.i("S/MIME cert=" + cert.getSubjectDN().getName());
-                            result.add(cert);
-                            pem = reader.readPemObject();
-                        }
-                    }
-                }
-                Log.i("S/MIME certs=" + count);
-            }
-
-        Log.i("S/MIME total certs=" + result.size());
-        return result;
+        return new ArrayList<>();
     }
 
     static KeyStore getCAStore(Context context) throws KeyStoreException, CertificateException, IOException, NoSuchAlgorithmException {

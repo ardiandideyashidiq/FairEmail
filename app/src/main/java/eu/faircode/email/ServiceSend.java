@@ -804,9 +804,7 @@ public class ServiceSend extends ServiceBase implements SharedPreferences.OnShar
         Long max_size = null;
         SendFailedException partial = null;
         if (ident.auth_type == AUTH_TYPE_GRAPH) {
-            start = new Date().getTime();
-            MicrosoftGraph.send(ServiceSend.this, ident, imessage);
-            end = new Date().getTime();
+            throw new MessagingException("Microsoft Graph protocol is disabled");
         } else {
             if (account != null)
                 try (EmailService iaccount = new EmailService(this, account, EmailService.PURPOSE_USE, debug)) {

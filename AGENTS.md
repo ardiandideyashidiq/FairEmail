@@ -2,8 +2,7 @@
 
 ## Project Overview
 
-FairEmail is a privacy-oriented, fully-featured, offline-first email client for Android supporting IMAP, POP3, SMTP, S/MIME, OpenPGP, and Microsoft Graph. It is written in pure Java (Java 8+) with a flat package structure (`eu.faircode.email`) and licensed under GPLv3.
-
+FairEmail is a privacy-oriented, lightweight, offline-first email client for Android. This repository profile is size-optimized and focused strictly on **Google (Gmail / Google Workspace)** accounts over IMAP and SMTP with OAuth2, packaged for **arm64-v8a** and **English only**. Non-Google providers, POP3, Microsoft Graph, Apache POI/Outlook parsers, redundant fonts, and multi-language string tables have been stripped out. It is written in pure Java (Java 8+) with a flat package structure (`eu.faircode.email`) and licensed under GPLv3.
 ---
 
 ## Architecture & Data Flow
@@ -43,7 +42,7 @@ FairEmail is a privacy-oriented, fully-featured, offline-first email client for 
    - Message bodies are downloaded lazily on display or eagerly via queued `EntityOperation.BODY` commands handled by `Core.onBody()`.
 2. **Outbound Email**:
    - `ActivityCompose.java` creates `EntityMessage` records in `EntityFolder.OUTBOX` and enqueues `EntityOperation.SEND`.
-   - `ServiceSend.java` observes `db.operation().liveSend()`, processes the queue via a single-thread background executor under a wake lock, constructs standard `MimeMessage` objects (`MessageHelper.from()`), signs/encrypts (PGP/S-MIME), and dispatches via SMTP or Microsoft Graph.
+   - `ServiceSend.java` observes `db.operation().liveSend()`, processes the queue via a single-thread background executor under a wake lock, constructs standard `MimeMessage` objects (`MessageHelper.from()`), and dispatches via SMTP over TLS with XOAUTH2.
    - On success, the message is uploaded/moved to the Sent folder (`EntityOperation.ADD`) and the Outbox record is cleared.
 3. **Optimistic Updates**:
    - User actions (mark read, delete, archive, star) immediately update local SQLite flags (`ui_seen`, `ui_flagged`, `ui_hide`) and enqueue an `EntityOperation` for background synchronization.
@@ -109,12 +108,6 @@ FairEmail is a privacy-oriented, fully-featured, offline-first email client for 
 # Download tracker and debounce rule lists
 ./gradlew downloadBraveClean downloadBraveDebounce downloadAdguard
 
-# Download Mozilla Root CA certificates for S/MIME
-./gradlew downloadSmime
-
-# Sync translations from Crowdin CLI
-./gradlew downloadCrowdin
-
 # Recompile Markdown documentation to HTML using Pandoc
 ./gradlew updateFAQ updatePrivacy
 ```
@@ -177,7 +170,7 @@ FairEmail is a privacy-oriented, fully-featured, offline-first email client for 
 - **Service Lifecycle**: Background services utilize `TwoStateOwner` to observe Room `LiveData` without an Activity/Fragment context.
 
 ### Networking & HTTP
-- **No OkHttp, Retrofit, or Volley**: HTTP/REST requests (e.g. update checks, Microsoft Graph API, OAuth) use `java.net.URL` and `javax.net.ssl.HttpsURLConnection`.
+- **No OkHttp, Retrofit, or Volley**: HTTP/REST requests (e.g. update checks, OAuth token refresh) use `java.net.URL` and `javax.net.ssl.HttpsURLConnection`.
 
 ### Logging & Error Handling
 - Use `Log.i()`, `Log.w()`, `Log.e()`, and `Log.breadcrumb()`.
@@ -205,7 +198,7 @@ FairEmail is a privacy-oriented, fully-featured, offline-first email client for 
 
 ## Runtime & Tooling Preferences
 
-- **Java Development Kit**: **JDK 21** required (`JavaLanguageVersion.of(21)`).
+- **Java Development Kit**: **JDK 21** required (`JavaLanguageVersion.of(21)`). Run Gradle commands with `JAVA_HOME=/usr/lib/jvm/java-21-openjdk` if the system default JDK is newer.
 - **Gradle Version**: **9.7.1** (via Gradle wrapper).
 - **Android Gradle Plugin (AGP)**: **9.4.1**.
 - **Android SDK**: `compileSdk 37`, `targetSdk 37`, `minSdk 23` (submodules set `minSdk 21`).
