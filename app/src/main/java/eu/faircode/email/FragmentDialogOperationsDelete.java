@@ -23,9 +23,6 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
-import android.view.LayoutInflater;
-import android.view.View;
-import android.widget.CheckBox;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -40,26 +37,19 @@ public class FragmentDialogOperationsDelete extends FragmentDialogBase {
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         final Context context = getContext();
-        final View dview = LayoutInflater.from(context).inflate(R.layout.dialog_delete_operations, null);
-        final CheckBox cbError = dview.findViewById(R.id.cbError);
-        final CheckBox cbFetch = dview.findViewById(R.id.cbFetch);
-        final CheckBox cbMove = dview.findViewById(R.id.cbMove);
-        final CheckBox cbFlag = dview.findViewById(R.id.cbFlag);
-        final CheckBox cbDelete = dview.findViewById(R.id.cbDelete);
-        final CheckBox cbSend = dview.findViewById(R.id.cbSend);
-
+        final DialogDeleteOperationsView dialogView = new DialogDeleteOperationsView(context);
         return new AlertDialog.Builder(context)
-                .setView(dview)
+                .setView(dialogView.getComposeView())
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         Bundle args = new Bundle();
-                        args.putBoolean("error", cbError.isChecked());
-                        args.putBoolean("fetch", cbFetch.isChecked());
-                        args.putBoolean("move", cbMove.isChecked());
-                        args.putBoolean("flag", cbFlag.isChecked());
-                        args.putBoolean("delete", cbDelete.isChecked());
-                        args.putBoolean("send", cbSend.isChecked());
+                        args.putBoolean("error", dialogView.isError());
+                        args.putBoolean("fetch", dialogView.isFetch());
+                        args.putBoolean("move", dialogView.isMove());
+                        args.putBoolean("flag", dialogView.isFlag());
+                        args.putBoolean("delete", dialogView.isDelete());
+                        args.putBoolean("send", dialogView.isSend());
 
                         new SimpleTask<Integer>() {
                             private Toast toast = null;
