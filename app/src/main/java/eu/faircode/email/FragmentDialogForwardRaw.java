@@ -30,14 +30,8 @@ import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.net.Uri;
 import android.os.Bundle;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
-import android.widget.ProgressBar;
-import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -54,6 +48,7 @@ import java.util.Objects;
 
 public class FragmentDialogForwardRaw extends FragmentDialogBase {
     private boolean enabled;
+    private DialogForwardRawView forwardRawView;
 
     private static final long AUTO_CONFIRM_DELAY = 2 * 1000L;
 
@@ -67,37 +62,29 @@ public class FragmentDialogForwardRaw extends FragmentDialogBase {
             enabled = savedInstanceState.getBoolean("fair:enabled");
 
         final Context context = getContext();
-        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_forward_raw, null);
-        ProgressBar pbDownloaded = dview.findViewById(R.id.pbDownloaded);
-        TextView tvRemaining = dview.findViewById(R.id.tvRemaining);
-        TextView tvOption = dview.findViewById(R.id.tvOption);
-        TextView tvNoInternet = dview.findViewById(R.id.tvNoInternet);
-        CheckBox cbAutoConfirm = dview.findViewById(R.id.cbAutoConfirm);
-
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
         boolean eml_auto_confirm = prefs.getBoolean("eml_auto_confirm", false);
 
-        pbDownloaded.setProgress(0);
-        pbDownloaded.setMax(ids.length);
-        tvRemaining.setText(getString(R.string.title_eml_downloaded, "-"));
-        cbAutoConfirm.setChecked(eml_auto_confirm);
-
-        tvOption.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                v.getContext().startActivity(new Intent(v.getContext(), ActivitySetup.class)
-                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                        .putExtra("tab", "connection"));
-            }
-        });
-
-        cbAutoConfirm.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton compoundButton, boolean checked) {
-                prefs.edit().putBoolean("eml_auto_confirm", checked).apply();
-            }
-        });
-
+        forwardRawView = new DialogForwardRawView(
+                context,
+                ids.length,
+                getString(R.string.title_eml_downloaded, "-"),
+                eml_auto_confirm,
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        context.startActivity(new Intent(context, ActivitySetup.class)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK)
+                                .putExtra("tab", "connection"));
+                    }
+                },
+                new DialogForwardRawView.OnAutoConfirmChangeListener() {
+                    @Override
+                    public void onAutoConfirmChanged(boolean checked) {
+                        prefs.edit().putBoolean("eml_auto_confirm", checked).apply();
+                    }
+                }
+        );
         NumberFormat NF = NumberFormat.getNumberInstance();
 
         new SimpleTask<long[]>() {
@@ -185,13 +172,14 @@ public class FragmentDialogForwardRaw extends FragmentDialogBase {
                         if (remaining == null)
                             return;
 
-                        pbDownloaded.setProgress(ids.length - remaining);
+                        if (forwardRawView != null) {
+                            forwardRawView.setProgress(ids.length - remaining);
 
-                        String of = getString(R.string.title_of,
-                                NF.format(ids.length - remaining),
-                                NF.format(ids.length));
-                        tvRemaining.setText(getString(R.string.title_eml_downloaded, of));
-
+                            String of = getString(R.string.title_of,
+                                    NF.format(ids.length - remaining),
+                                    NF.format(ids.length));
+                            forwardRawView.setRemaining(getString(R.string.title_eml_downloaded, of));
+                        }
                         if (remaining == 0) {
                             ld.removeObserver(this);
                             getArguments().putLong("account", args.getLong("account"));
@@ -234,7 +222,7 @@ public class FragmentDialogForwardRaw extends FragmentDialogBase {
         }.execute(this, getArguments(), "messages:forward");
 
         return new AlertDialog.Builder(context)
-                .setView(dview)
+                .setView(forwardRawView.getComposeView())
                 .setPositiveButton(R.string.title_send, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
@@ -349,8 +337,8 @@ public class FragmentDialogForwardRaw extends FragmentDialogBase {
             try {
                 ConnectionHelper.NetworkState state =
                         ConnectionHelper.getNetworkState(getContext());
-                getDialog().findViewById(R.id.tvNoInternet).setVisibility(
-                        state.isSuitable() ? View.GONE : View.VISIBLE);
+                if (forwardRawView != null)
+                    forwardRawView.setNoInternet(state == null || !state.isSuitable());
             } catch (Throwable ex) {
                 Log.e(ex);
             }
