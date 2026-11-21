@@ -636,7 +636,7 @@ private fun FloatingExpressiveDock(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(6.dp)
-                        .height(IntrinsicSize.Min)
+                        .height(50.dp)
                 ) {
                     val tabs = MainTab.entries
                     val tabWidth = maxWidth / tabs.size
@@ -696,7 +696,7 @@ private fun FloatingExpressiveDock(
                                         }
                                         onSelectTab(tab)
                                     }
-                                    .padding(vertical = 8.dp, horizontal = 2.dp),
+                                    .padding(vertical = 4.dp, horizontal = 2.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
