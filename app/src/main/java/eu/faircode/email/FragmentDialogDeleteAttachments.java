@@ -144,30 +144,23 @@ public class FragmentDialogDeleteAttachments extends FragmentDialogBase {
 
         private List<EntityAttachment> items = new ArrayList<>();
 
-        public class ViewHolder extends RecyclerView.ViewHolder implements CompoundButton.OnCheckedChangeListener {
-            private CheckBox cbEnabled;
-            private TextView tvInfo;
+        public class ViewHolder extends RecyclerView.ViewHolder implements eu.faircode.email.ui.CheckboxRowComposeView.OnCheckedChangeListener {
+            private eu.faircode.email.ui.AttachmentDeleteComposeView itemView;
 
-            ViewHolder(View itemView) {
+            ViewHolder(eu.faircode.email.ui.AttachmentDeleteComposeView itemView) {
                 super(itemView);
-                cbEnabled = itemView.findViewById(R.id.cbEnabled);
-                tvInfo = itemView.findViewById(R.id.tvInfo);
+                this.itemView = itemView;
             }
 
             private void wire() {
-                cbEnabled.setOnCheckedChangeListener(this);
+                itemView.setOnCheckedChangeListener(this);
             }
 
             private void unwire() {
-                cbEnabled.setOnCheckedChangeListener(null);
+                itemView.setOnCheckedChangeListener(null);
             }
 
             private void bindTo(EntityAttachment attachment) {
-                cbEnabled.setText(attachment.name);
-                cbEnabled.setChecked(attachment.selected);
-                cbEnabled.setEnabled(attachment.encryption == null &&
-                        (attachment.size == null || attachment.size > 0));
-
                 StringBuilder sb = new StringBuilder();
                 if (!TextUtils.isEmpty(attachment.type))
                     sb.append(attachment.type);
@@ -176,11 +169,17 @@ public class FragmentDialogDeleteAttachments extends FragmentDialogBase {
                         sb.append(' ');
                     sb.append(Helper.humanReadableByteCount(attachment.size));
                 }
-                tvInfo.setText(sb.toString());
+                itemView.bind(
+                        attachment.name == null ? "" : attachment.name,
+                        sb.toString(),
+                        attachment.selected,
+                        attachment.encryption == null &&
+                                (attachment.size == null || attachment.size > 0)
+                );
             }
 
             @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+            public void onCheckedChanged(boolean isChecked) {
                 int pos = getAdapterPosition();
                 if (pos == RecyclerView.NO_POSITION)
                     return;
@@ -264,7 +263,8 @@ public class FragmentDialogDeleteAttachments extends FragmentDialogBase {
         @Override
         @NonNull
         public AdapterAttachmentSelect.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new AdapterAttachmentSelect.ViewHolder(inflater.inflate(R.layout.item_attachment_delete, parent, false));
+            return new AdapterAttachmentSelect.ViewHolder(
+                    eu.faircode.email.ui.ComposeContentHelper.createAttachmentDeleteView(parent.getContext()));
         }
 
         @Override

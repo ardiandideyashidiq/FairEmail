@@ -701,10 +701,9 @@ public class FragmentOptionsBackup extends FragmentBase implements SharedPrefere
 
         final int colorWarning = Helper.resolveColor(context, R.attr.colorWarning);
 
-        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_import_progress, null);
-        ProgressBar pbWait = dview.findViewById(R.id.pbWait);
-        TextView tvLog = dview.findViewById(R.id.tvLog);
-        tvLog.setText(null);
+        final eu.faircode.email.ui.ImportProgressComposeView dview =
+                eu.faircode.email.ui.ComposeContentHelper.createImportProgressView(context);
+        dview.setLog(null);
 
         Map<String, Object> defer = Collections.synchronizedMap(new HashMap<>());
 
@@ -752,18 +751,18 @@ public class FragmentOptionsBackup extends FragmentBase implements SharedPrefere
 
             @Override
             protected void onPreExecute(Bundle args) {
-                pbWait.setVisibility(View.VISIBLE);
+                dview.setWaiting(true);
             }
 
             @Override
             protected void onProgress(CharSequence status, Bundle data) {
                 ssb.append(status).append("\n");
-                tvLog.setText(ssb);
+                dview.setLog(ssb);
             }
 
             @Override
             protected void onPostExecute(Bundle args) {
-                pbWait.setVisibility(View.GONE);
+                dview.setWaiting(false);
                 ok.setEnabled(true);
             }
 
@@ -1319,7 +1318,7 @@ public class FragmentOptionsBackup extends FragmentBase implements SharedPrefere
                     onProgress(ssb, null);
                 }
             }
-        }.setHandler(tvLog.getHandler()).execute(this, args, "setup:import");
+        }.setHandler(dview.getHandler()).execute(this, args, "setup:import");
     }
 
     private static boolean skipOption(String key) {

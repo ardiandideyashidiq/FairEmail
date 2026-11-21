@@ -90,4 +90,24 @@ object ComposeContentHelper {
             }
         }
     }
+
+    @JvmStatic
+    fun createAttachmentDeleteView(context: Context): AttachmentDeleteComposeView {
+        return AttachmentDeleteComposeView(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
+
+    @JvmStatic
+    fun createImportProgressView(context: Context): ImportProgressComposeView {
+        return ImportProgressComposeView(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
 }
