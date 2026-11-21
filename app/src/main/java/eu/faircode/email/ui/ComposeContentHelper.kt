@@ -221,4 +221,65 @@ object ComposeContentHelper {
             )
         }
     }
+
+    @JvmStatic
+    fun createResponseDialogView(context: Context): SingleInputDialogComposeView {
+        return SingleInputDialogComposeView(
+            context = context,
+            titleIconRes = eu.faircode.email.R.drawable.twotone_vpn_key_24,
+            titleRes = eu.faircode.email.R.string.title_pro_response
+        ).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
+
+    @JvmStatic
+    fun createAskSpamDialogView(context: Context): ConfirmCheckboxDialogComposeView {
+        return ConfirmCheckboxDialogComposeView(
+            context = context,
+            iconRes = eu.faircode.email.R.drawable.twotone_report_24,
+            useWarningTint = true,
+            checkboxLabelRes = eu.faircode.email.R.string.title_block_sender
+        ).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
+
+    @JvmStatic
+    fun createContactDeleteDialogView(context: Context): ConfirmCheckboxDialogComposeView {
+        return ConfirmCheckboxDialogComposeView(
+            context = context,
+            iconRes = eu.faircode.email.R.drawable.twotone_person_24,
+            useWarningTint = false,
+            checkboxLabelRes = eu.faircode.email.R.string.title_no_ask_again
+        ).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            setMessage(eu.faircode.email.R.string.title_delete_contact)
+        }
+    }
+
+    @JvmStatic
+    fun createBoundaryErrorDialogView(context: Context, error: String): View {
+        return ComposeView(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool)
+            setContent {
+                FairEmailTheme {
+                    BoundaryErrorDialogContent(error = error)
+                }
+            }
+        }
+    }
 }

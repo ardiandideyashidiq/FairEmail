@@ -211,13 +211,12 @@ public class FragmentContacts extends FragmentBase {
                         if (context == null)
                             return;
 
-                        LayoutInflater inflater = LayoutInflater.from(context);
-                        View dview = inflater.inflate(R.layout.dialog_contact_delete, null);
-                        CheckBox cbNotAgain = dview.findViewById(R.id.cbNotAgain);
+                        eu.faircode.email.ui.ConfirmCheckboxDialogComposeView dview =
+                                eu.faircode.email.ui.ComposeContentHelper.createContactDeleteDialogView(context);
 
-                        cbNotAgain.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+                        dview.setOnCheckedChangeListener(new eu.faircode.email.ui.CheckboxRowComposeView.OnCheckedChangeListener() {
                             @Override
-                            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                            public void onCheckedChanged(boolean isChecked) {
                                 deleting = isChecked;
                             }
                         });

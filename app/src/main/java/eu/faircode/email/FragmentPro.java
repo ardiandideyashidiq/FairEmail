@@ -374,8 +374,9 @@ public class FragmentPro extends FragmentBase implements SharedPreferences.OnSha
 
     private void onMenuResponse() {
         final Context context = getContext();
-        final View dview = LayoutInflater.from(context).inflate(R.layout.dialog_response, null);
-        final EditText etResponse = dview.findViewById(R.id.etResponse);
+        final eu.faircode.email.ui.SingleInputDialogComposeView dview =
+                eu.faircode.email.ui.ComposeContentHelper.createResponseDialogView(context);
+        dview.requestInputFocus();
 
         new AlertDialog.Builder(context)
                 .setView(dview)
@@ -383,7 +384,7 @@ public class FragmentPro extends FragmentBase implements SharedPreferences.OnSha
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         try {
-                            String response = etResponse.getText().toString().trim();
+                            String response = dview.getText().trim();
                             int q = response.indexOf("?response=");
                             if (q > 0)
                                 response = response.substring(q + 10);

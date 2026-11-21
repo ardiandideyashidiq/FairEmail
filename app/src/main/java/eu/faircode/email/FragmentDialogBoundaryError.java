@@ -39,10 +39,8 @@ public class FragmentDialogBoundaryError extends FragmentDialogBase {
         String error = getArguments().getString("error");
 
         final Context context = getContext();
-        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_boundary_error, null);
-        TextView tvError = dview.findViewById(R.id.tvError);
-
-        tvError.setText(error);
+        View dview = eu.faircode.email.ui.ComposeContentHelper.createBoundaryErrorDialogView(
+                context, error == null ? "" : error);
 
         return new AlertDialog.Builder(context)
                 .setView(dview)
