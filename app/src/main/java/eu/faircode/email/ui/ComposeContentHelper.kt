@@ -64,4 +64,30 @@ object ComposeContentHelper {
             )
         }
     }
+
+    @JvmStatic
+    fun createLogItemView(context: Context): LogItemComposeView {
+        return LogItemComposeView(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
+
+    @JvmStatic
+    fun createDarkDialogView(context: Context, onIssue: View.OnClickListener): View {
+        return ComposeView(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindowOrReleasedFromPool)
+            setContent {
+                FairEmailTheme {
+                    DarkDialogContent(onIssue = { onIssue.onClick(this) })
+                }
+            }
+        }
+    }
 }

@@ -7597,10 +7597,7 @@ public class AdapterMessage extends RecyclerView.Adapter<AdapterMessage.ViewHold
                 bindBody(message, false);
             } else {
                 if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q && false) {
-                    View view = LayoutInflater.from(context).inflate(R.layout.dialog_dark, null);
-                    final Button btnIssue = view.findViewById(R.id.btnIssue);
-
-                    btnIssue.setOnClickListener(new View.OnClickListener() {
+                    View view = eu.faircode.email.ui.ComposeContentHelper.createDarkDialogView(context, new View.OnClickListener() {
                         @Override
                         public void onClick(View v) {
                             Helper.viewFAQ(v.getContext(), 81);

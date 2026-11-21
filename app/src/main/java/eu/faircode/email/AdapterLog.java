@@ -58,25 +58,19 @@ public class AdapterLog extends RecyclerView.Adapter<AdapterLog.ViewHolder> {
     private DateFormat TF;
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        private TextView tvTime;
-        private TextView tvData;
+        private eu.faircode.email.ui.LogItemComposeView itemView;
 
-        ViewHolder(View itemView) {
+        ViewHolder(eu.faircode.email.ui.LogItemComposeView itemView) {
             super(itemView);
-
-            tvTime = itemView.findViewById(R.id.tvTime);
-            tvData = itemView.findViewById(R.id.tvData);
+            this.itemView = itemView;
         }
 
         private void bindTo(EntityLog log) {
-            tvTime.setText(TF.format(log.time));
-            SpannableStringBuilder ssb = new SpannableStringBuilderEx(log.data);
-
-            Integer color = log.getColor(context);
-            if (color != null)
-                ssb.setSpan(new ForegroundColorSpan(color), 0, ssb.length(), 0);
-
-            tvData.setText(ssb);
+            itemView.bind(
+                    TF.format(log.time),
+                    log.data == null ? "" : log.data,
+                    log.getColor(context)
+            );
         }
     }
 
@@ -224,7 +218,7 @@ public class AdapterLog extends RecyclerView.Adapter<AdapterLog.ViewHolder> {
     @Override
     @NonNull
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        return new ViewHolder(inflater.inflate(R.layout.item_log, parent, false));
+        return new ViewHolder(eu.faircode.email.ui.ComposeContentHelper.createLogItemView(parent.getContext()));
     }
 
     @Override
