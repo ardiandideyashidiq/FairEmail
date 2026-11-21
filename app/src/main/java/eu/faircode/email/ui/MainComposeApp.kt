@@ -86,6 +86,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
 import androidx.preference.PreferenceManager
+import eu.faircode.email.ui.AddAccountMode
+import eu.faircode.email.ui.AddAccountSheet
 import eu.faircode.email.ui.SingleInputDialogContent
 import eu.faircode.email.ui.theme.ExpressiveMotion
 import eu.faircode.email.ui.theme.FairEmailTheme
@@ -132,6 +134,7 @@ fun MainComposeApp() {
     var selectedFolderId by remember { mutableStateOf<Long?>(null) }
     var selectedFolderTitle by remember { mutableStateOf<String?>(null) }
     var openedMessage by remember { mutableStateOf<TupleMessageEx?>(null) }
+    var addAccountMode by remember { mutableStateOf<AddAccountMode?>(null) }
 
     var pendingBackupAction by remember { mutableStateOf<BackupAction?>(null) }
     var pendingBackupUri by remember { mutableStateOf<Uri?>(null) }
@@ -328,21 +331,8 @@ fun MainComposeApp() {
 
                         MainTab.Accounts -> AccountsScreen(
                             db = db,
-                            onAddGmailOAuth = {
-                                context.startActivity(
-                                    Intent(context, ActivitySetup::class.java)
-                                        .putExtra("target", "oauth")
-                                        .putExtra("id", "gmail")
-                                        .putExtra("name", "Gmail")
-                                        .putExtra("askAccount", true)
-                                )
-                            },
-                            onAddGmailAndroid = {
-                                context.startActivity(
-                                    Intent(context, ActivitySetup::class.java)
-                                        .putExtra("target", "gmail")
-                                )
-                            },
+                            onAddGmailOAuth = { addAccountMode = AddAccountMode.OAuth },
+                            onAddGmailAndroid = { addAccountMode = AddAccountMode.AndroidAccount },
                             onExportAccounts = { exportAccountsLauncher.launch("fairemail-accounts.enc") },
                             onImportAccounts = { importAccountsLauncher.launch(arrayOf("*/*")) },
                             onExportMail = { exportMailLauncher.launch("fairemail-mail.enc") },
@@ -360,6 +350,17 @@ fun MainComposeApp() {
                 }
             }
         }
+    }
+
+    if (addAccountMode != null) {
+        AddAccountSheet(
+            initialMode = addAccountMode!!,
+            onDismiss = { addAccountMode = null },
+            onSuccess = { message ->
+                addAccountMode = null
+                scope.launch { snackbarHostState.showSnackbar(message) }
+            }
+        )
     }
 
     if (pendingBackupAction != null && pendingBackupUri != null) {
