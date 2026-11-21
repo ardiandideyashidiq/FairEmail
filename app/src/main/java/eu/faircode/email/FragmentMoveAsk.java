@@ -59,20 +59,12 @@ public class FragmentMoveAsk extends FragmentDialogBase {
         ArrayList<FragmentMessages.MessageTarget> result = getArguments().getParcelableArrayList("result");
 
         final Context context = getContext();
-        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_ask_move, null);
-        TextView tvMessages = dview.findViewById(R.id.tvMessages);
-        TextView tvSourceFolders = dview.findViewById(R.id.tvSourceFolders);
-        TextView tvTargetFolders = dview.findViewById(R.id.tvTargetFolders);
-        CheckBox cbNotAgain = dview.findViewById(R.id.cbNotAgain);
-        TextView tvJunkLearn = dview.findViewById(R.id.tvJunkLearn);
+        final eu.faircode.email.ui.AskMoveDialogComposeView dview =
+                eu.faircode.email.ui.ComposeContentHelper.createAskMoveDialogView(context);
 
         String question = context.getResources()
                 .getQuantityString(R.plurals.title_moving_messages,
                         result.size(), result.size());
-
-        tvMessages.setText(question);
-        tvSourceFolders.setText(getNames(result, false));
-        tvTargetFolders.setText(getNames(result, true));
 
         List<String> sources = new ArrayList<>();
         List<String> targets = new ArrayList<>();
@@ -94,49 +86,45 @@ public class FragmentMoveAsk extends FragmentDialogBase {
                 junk = true;
         }
 
-        Drawable source = null;
+        int sourceIcon;
         if (sources.size() == 1) {
-            source = ContextCompat.getDrawable(context, EntityFolder.getIcon(sources.get(0)));
-            if (source != null)
-                source.setBounds(0, 0, source.getIntrinsicWidth(), source.getIntrinsicHeight());
+            sourceIcon = EntityFolder.getIcon(sources.get(0));
             if (sourceColor == null)
                 sourceColor = EntityFolder.getDefaultColor(sources.get(0), context);
         } else {
-            source = ContextCompat.getDrawable(context, R.drawable.twotone_folders_24);
-            source.setBounds(0, 0, source.getIntrinsicWidth(), source.getIntrinsicHeight());
+            sourceIcon = R.drawable.twotone_folders_24;
             sourceColor = null;
         }
 
-        Drawable target = null;
+        int targetIcon;
         if (targets.size() == 1) {
-            target = ContextCompat.getDrawable(context, EntityFolder.getIcon(targets.get(0)));
-            if (target != null)
-                target.setBounds(0, 0, target.getIntrinsicWidth(), target.getIntrinsicHeight());
+            targetIcon = EntityFolder.getIcon(targets.get(0));
             if (targetColor == null)
                 targetColor = EntityFolder.getDefaultColor(targets.get(0), context);
-        } else
+        } else {
+            targetIcon = R.drawable.twotone_folders_24;
             targetColor = null;
-
-        tvSourceFolders.setCompoundDrawablesRelative(source, null, null, null);
-        tvTargetFolders.setCompoundDrawablesRelative(target, null, null, null);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (sourceColor != null)
-                TextViewCompat.setCompoundDrawableTintList(tvSourceFolders, ColorStateList.valueOf(sourceColor));
-            if (targetColor != null)
-                TextViewCompat.setCompoundDrawableTintList(tvTargetFolders, ColorStateList.valueOf(targetColor));
         }
 
+        dview.bind(
+                question,
+                getNames(result, false),
+                sourceIcon,
+                sourceColor,
+                getNames(result, true),
+                targetIcon,
+                targetColor,
+                junk
+        );
+
         if (notagain != null)
-            cbNotAgain.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            dview.setOnCheckedChangeListener(new eu.faircode.email.ui.CheckboxRowComposeView.OnCheckedChangeListener() {
                 @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(buttonView.getContext());
+                public void onCheckedChanged(boolean isChecked) {
+                    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
                     prefs.edit().putBoolean(notagain, isChecked).apply();
                 }
             });
-
-        tvJunkLearn.setVisibility(junk ? View.VISIBLE : View.GONE);
 
         return new AlertDialog.Builder(context)
                 .setView(dview)

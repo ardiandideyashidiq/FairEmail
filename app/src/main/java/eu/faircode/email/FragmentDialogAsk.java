@@ -57,42 +57,22 @@ public class FragmentDialogAsk extends FragmentDialogBase {
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 
-        View dview = LayoutInflater.from(context).inflate(R.layout.dialog_ask_again, null);
-        TextView tvMessage = dview.findViewById(R.id.tvMessage);
-        TextView tvRemark = dview.findViewById(R.id.tvRemark);
-        CheckBox cbNotAgain = dview.findViewById(R.id.cbNotAgain);
-        TextView tvAccept = dview.findViewById(R.id.tvAccept);
-        ImageButton ibInfo = dview.findViewById(R.id.ibInfo);
+        final eu.faircode.email.ui.AskDialogComposeView dview =
+                eu.faircode.email.ui.ComposeContentHelper.createAskDialogView(context);
 
-        tvMessage.setText(question);
-        tvRemark.setText(remark);
-        tvRemark.setVisibility(remark == null ? View.GONE : View.VISIBLE);
-        cbNotAgain.setVisibility(notagain == null ? View.GONE : View.VISIBLE);
-        tvAccept.setText(accept);
-        tvAccept.setVisibility(notagain == null && accept != null ? View.VISIBLE : View.GONE);
-        ibInfo.setVisibility(faq == 0 ? View.GONE : View.VISIBLE);
+        dview.setMessage(question);
+        dview.setRemark(remark, 0, null);
+        dview.setShowNotAgain(notagain != null);
+        dview.setAcceptText(accept);
 
-        if (warning) {
-            Drawable w = ContextCompat.getDrawable(context, R.drawable.twotone_warning_24);
-            w.setBounds(0, 0, w.getIntrinsicWidth(), w.getIntrinsicHeight());
-            w.setTint(colorError);
-            tvMessage.setCompoundDrawablesRelative(w, null, null, null);
-            tvMessage.setCompoundDrawablePadding(Helper.dp2pixels(context, 12));
-        }
-
-        if (notagain != null)
-            cbNotAgain.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-                @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    tvAccept.setVisibility(isChecked && accept != null ? View.VISIBLE : View.GONE);
-                }
-            });
+        if (warning)
+            dview.setLeadingIcon(R.drawable.twotone_warning_24, colorError);
 
         if (faq != 0)
-            ibInfo.setOnClickListener(new View.OnClickListener() {
+            dview.setInfoButton(true, new Runnable() {
                 @Override
-                public void onClick(View v) {
-                    Helper.viewFAQ(v.getContext(), faq);
+                public void run() {
+                    Helper.viewFAQ(context, faq);
                 }
             });
 
@@ -105,7 +85,7 @@ public class FragmentDialogAsk extends FragmentDialogBase {
                     public void onClick(DialogInterface dialog, int which) {
                         EntityLog.log(context, "Ask confirmed");
                         if (notagain != null)
-                            prefs.edit().putBoolean(notagain, cbNotAgain.isChecked()).apply();
+                            prefs.edit().putBoolean(notagain, dview.isChecked()).apply();
                         sendResult(Activity.RESULT_OK);
                     }
                 })

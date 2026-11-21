@@ -282,4 +282,24 @@ object ComposeContentHelper {
             }
         }
     }
+
+    @JvmStatic
+    fun createAskDialogView(context: Context): AskDialogComposeView {
+        return AskDialogComposeView(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
+
+    @JvmStatic
+    fun createAskMoveDialogView(context: Context): AskMoveDialogComposeView {
+        return AskMoveDialogComposeView(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
 }

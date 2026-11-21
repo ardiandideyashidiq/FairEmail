@@ -6002,24 +6002,26 @@ public class AdapterMessage extends RecyclerView.Adapter<AdapterMessage.ViewHold
             if (open_amp_confirmed)
                 onShowAmpConfirmed(message);
             else {
-                LayoutInflater inflater = LayoutInflater.from(context);
-                View dview = inflater.inflate(R.layout.dialog_ask_amp, null, false);
-                final TextView tvRemark = dview.findViewById(R.id.tvRemark);
-                final CheckBox cbNotAgain = dview.findViewById(R.id.cbNotAgain);
-
-                tvRemark.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-                        Helper.view(v.getContext(), Uri.parse("https://amp.dev/about/email/"), true);
-                    }
-                });
+                final eu.faircode.email.ui.AskDialogComposeView dview =
+                        eu.faircode.email.ui.ComposeContentHelper.createAskDialogView(context);
+                dview.setMessage(context.getString(R.string.title_ask_show_amp));
+                dview.setLeadingIcon(R.drawable.twotone_bolt_24, null);
+                dview.setRemark(
+                        context.getString(R.string.title_ask_show_amp_hint),
+                        R.drawable.twotone_info_24,
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                Helper.view(context, Uri.parse("https://amp.dev/about/email/"), true);
+                            }
+                        });
 
                 new AlertDialog.Builder(context)
                         .setView(dview)
                         .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
-                                if (cbNotAgain.isChecked())
+                                if (dview.isChecked())
                                     prefs.edit().putBoolean("open_amp_confirmed", true).apply();
                                 onShowAmpConfirmed(message);
                             }
@@ -6073,18 +6075,18 @@ public class AdapterMessage extends RecyclerView.Adapter<AdapterMessage.ViewHold
             if (open_full_confirmed && !junk)
                 onActionOpenFullConfirmed(message);
             else {
-                LayoutInflater inflater = LayoutInflater.from(context);
-                View dview = inflater.inflate(R.layout.dialog_ask_full, null, false);
-                final CheckBox cbNotAgain = dview.findViewById(R.id.cbNotAgain);
-
-                cbNotAgain.setVisibility(junk ? View.GONE : View.VISIBLE);
+                final eu.faircode.email.ui.AskDialogComposeView dview =
+                        eu.faircode.email.ui.ComposeContentHelper.createAskDialogView(context);
+                dview.setMessage(context.getString(R.string.title_ask_show_html));
+                dview.setRemark(context.getString(R.string.title_ask_show_image_hint), 0, null);
+                dview.setShowNotAgain(!junk);
 
                 new AlertDialog.Builder(context)
                         .setView(dview)
                         .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
-                                if (cbNotAgain.isChecked())
+                                if (dview.isChecked())
                                     prefs.edit().putBoolean("open_full_confirmed", true).apply();
                                 onActionOpenFullConfirmed(message);
                             }
