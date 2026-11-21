@@ -332,4 +332,24 @@ object ComposeContentHelper {
             )
         }
     }
+
+    @JvmStatic
+    fun createOrderItemView(context: Context): OrderItemComposeView {
+        return OrderItemComposeView(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
+
+    @JvmStatic
+    fun createSelectListDialogView(context: Context): SelectListDialogComposeView {
+        return SelectListDialogComposeView(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
 }

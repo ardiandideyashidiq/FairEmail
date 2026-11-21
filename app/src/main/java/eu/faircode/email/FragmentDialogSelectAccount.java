@@ -46,13 +46,8 @@ public class FragmentDialogSelectAccount extends FragmentDialogBase {
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         final Context context = getContext();
 
-        final View dview = LayoutInflater.from(context).inflate(R.layout.dialog_account_select, null);
-        RecyclerView rvSelect = dview.findViewById(R.id.rvSelect);
-        final ContentLoadingProgressBar pbWait = dview.findViewById(R.id.pbWait);
-        final Group grpReady = dview.findViewById(R.id.grpReady);
-
-        rvSelect.setHasFixedSize(false);
-        rvSelect.setLayoutManager(new LinearLayoutManager(context));
+        final eu.faircode.email.ui.SelectListDialogComposeView dview =
+                eu.faircode.email.ui.ComposeContentHelper.createSelectListDialogView(context);
 
         Dialog dialog = new AlertDialog.Builder(context)
                 .setIcon(R.drawable.twotone_account_circle_24)
@@ -64,14 +59,12 @@ public class FragmentDialogSelectAccount extends FragmentDialogBase {
         new SimpleTask<List<EntityAccount>>() {
             @Override
             protected void onPreExecute(Bundle args) {
-                pbWait.setVisibility(View.VISIBLE);
-                grpReady.setVisibility(View.GONE);
+                dview.setLoading(true);
             }
 
             @Override
             protected void onPostExecute(Bundle args) {
-                pbWait.setVisibility(View.GONE);
-                grpReady.setVisibility(View.VISIBLE);
+                dview.setLoading(false);
             }
 
             @Override
@@ -86,15 +79,23 @@ public class FragmentDialogSelectAccount extends FragmentDialogBase {
             }
 
             @Override
-            protected void onExecuted(Bundle args, List<EntityAccount> accounts) {
+            protected void onExecuted(Bundle args, final List<EntityAccount> accounts) {
                 if ("outlook".equals(args.getString("filter")))
                     for (EntityAccount account : new ArrayList<>(accounts))
                         if (!account.isOutlook())
                             accounts.remove(account);
 
-                AdapterAccount adapter = new AdapterAccount(context, accounts, new AdapterAccount.IListener() {
+                List<eu.faircode.email.ui.SelectOption> options = new ArrayList<>();
+                for (EntityAccount account : accounts)
+                    options.add(new eu.faircode.email.ui.SelectOption(
+                            account.color,
+                            account.name == null ? "" : account.name,
+                            null));
+
+                dview.setOptions(options, new eu.faircode.email.ui.SelectListDialogComposeView.OnItemSelectedListener() {
                     @Override
-                    public void onSelected(EntityAccount account) {
+                    public void onSelected(int index) {
+                        EntityAccount account = accounts.get(index);
                         Bundle args = getArguments();
                         args.putLong("account", account.id);
                         args.putInt("protocol", account.protocol);
@@ -104,7 +105,6 @@ public class FragmentDialogSelectAccount extends FragmentDialogBase {
                         dialog.dismiss();
                     }
                 });
-                rvSelect.setAdapter(adapter);
             }
 
             @Override

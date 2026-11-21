@@ -49,22 +49,19 @@ public class AdapterOrder extends RecyclerView.Adapter<AdapterOrder.ViewHolder> 
     private List<EntityOrder> items = new ArrayList<>();
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        private View view;
-        private TextView tvTitle;
-        private TextView tvSubTitle;
+        private eu.faircode.email.ui.OrderItemComposeView itemView;
 
-        ViewHolder(View itemView) {
+        ViewHolder(eu.faircode.email.ui.OrderItemComposeView itemView) {
             super(itemView);
-
-            view = itemView.findViewById(R.id.clItem);
-            tvTitle = itemView.findViewById(R.id.tvTitle);
-            tvSubTitle = itemView.findViewById(R.id.tvSubTitle);
+            this.itemView = itemView;
         }
 
         private void bindTo(EntityOrder item) {
             String[] text = item.getSortTitle(context);
-            tvTitle.setText(text[0]);
-            tvSubTitle.setText(text[1]);
+            itemView.bind(
+                    text[0] == null ? "" : text[0],
+                    text[1] == null ? "" : text[1]
+            );
         }
     }
 
@@ -200,7 +197,7 @@ public class AdapterOrder extends RecyclerView.Adapter<AdapterOrder.ViewHolder> 
     @Override
     @NonNull
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        return new ViewHolder(inflater.inflate(R.layout.item_order, parent, false));
+        return new ViewHolder(eu.faircode.email.ui.ComposeContentHelper.createOrderItemView(parent.getContext()));
     }
 
     @Override

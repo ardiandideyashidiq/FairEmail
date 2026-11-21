@@ -49,13 +49,8 @@ public class FragmentDialogSelectUnifiedFolder extends FragmentDialogBase {
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         final Context context = getContext();
 
-        final View dview = LayoutInflater.from(context).inflate(R.layout.dialog_account_select, null);
-        RecyclerView rvSelect = dview.findViewById(R.id.rvSelect);
-        final ContentLoadingProgressBar pbWait = dview.findViewById(R.id.pbWait);
-        final Group grpReady = dview.findViewById(R.id.grpReady);
-
-        rvSelect.setHasFixedSize(false);
-        rvSelect.setLayoutManager(new LinearLayoutManager(context));
+        final eu.faircode.email.ui.SelectListDialogComposeView dview =
+                eu.faircode.email.ui.ComposeContentHelper.createSelectListDialogView(context);
 
         Dialog dialog = new AlertDialog.Builder(context)
                 .setIcon(R.drawable.twotone_folder_open_24)
@@ -67,14 +62,12 @@ public class FragmentDialogSelectUnifiedFolder extends FragmentDialogBase {
         new SimpleTask<List<TupleFolderEx>>() {
             @Override
             protected void onPreExecute(Bundle args) {
-                pbWait.setVisibility(View.VISIBLE);
-                grpReady.setVisibility(View.GONE);
+                dview.setLoading(true);
             }
 
             @Override
             protected void onPostExecute(Bundle args) {
-                pbWait.setVisibility(View.GONE);
-                grpReady.setVisibility(View.VISIBLE);
+                dview.setLoading(false);
             }
 
             @Override
@@ -95,9 +88,19 @@ public class FragmentDialogSelectUnifiedFolder extends FragmentDialogBase {
                 unified.name = context.getString(R.string.title_folder_unified);
                 folders.add(0, unified);
 
-                AdapterFolder adapter = new AdapterFolder(context, folders, new AdapterFolder.IListener() {
+                final List<TupleFolderEx> items = folders;
+                List<eu.faircode.email.ui.SelectOption> options = new ArrayList<>();
+                for (TupleFolderEx folder : items) {
+                    String name = (folder.accountName == null
+                            ? folder.getDisplayName(context)
+                            : folder.accountName + "/" + folder.getDisplayName(context));
+                    options.add(new eu.faircode.email.ui.SelectOption(folder.color, name, null));
+                }
+
+                dview.setOptions(options, new eu.faircode.email.ui.SelectListDialogComposeView.OnItemSelectedListener() {
                     @Override
-                    public void onSelected(TupleFolderEx folder) {
+                    public void onSelected(int index) {
+                        TupleFolderEx folder = items.get(index);
                         LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(context);
                         if (folder.id < 0)
                             lbm.sendBroadcast(
@@ -115,8 +118,6 @@ public class FragmentDialogSelectUnifiedFolder extends FragmentDialogBase {
                         dialog.dismiss();
                     }
                 });
-
-                rvSelect.setAdapter(adapter);
             }
 
             @Override

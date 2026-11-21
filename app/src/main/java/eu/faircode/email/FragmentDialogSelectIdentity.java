@@ -49,13 +49,8 @@ public class FragmentDialogSelectIdentity extends FragmentDialogBase {
 
         final Bundle args = getArguments();
 
-        final View dview = LayoutInflater.from(context).inflate(R.layout.dialog_account_select, null);
-        RecyclerView rvSelect = dview.findViewById(R.id.rvSelect);
-        final ContentLoadingProgressBar pbWait = dview.findViewById(R.id.pbWait);
-        final Group grpReady = dview.findViewById(R.id.grpReady);
-
-        rvSelect.setHasFixedSize(false);
-        rvSelect.setLayoutManager(new LinearLayoutManager(context));
+        final eu.faircode.email.ui.SelectListDialogComposeView dview =
+                eu.faircode.email.ui.ComposeContentHelper.createSelectListDialogView(context);
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context)
                 .setIcon(R.drawable.twotone_person_24)
@@ -77,14 +72,12 @@ public class FragmentDialogSelectIdentity extends FragmentDialogBase {
         new SimpleTask<List<TupleIdentityEx>>() {
             @Override
             protected void onPreExecute(Bundle args) {
-                pbWait.setVisibility(View.VISIBLE);
-                grpReady.setVisibility(View.GONE);
+                dview.setLoading(true);
             }
 
             @Override
             protected void onPostExecute(Bundle args) {
-                pbWait.setVisibility(View.GONE);
-                grpReady.setVisibility(View.VISIBLE);
+                dview.setLoading(false);
             }
 
             @Override
@@ -94,10 +87,21 @@ public class FragmentDialogSelectIdentity extends FragmentDialogBase {
             }
 
             @Override
-            protected void onExecuted(Bundle args, List<TupleIdentityEx> identities) {
-                AdapterIdentity adapter = new AdapterIdentity(context, identities, new AdapterIdentity.IListener() {
+            protected void onExecuted(Bundle args, final List<TupleIdentityEx> identities) {
+                List<eu.faircode.email.ui.SelectOption> options = new java.util.ArrayList<>();
+                for (TupleIdentityEx identity : identities) {
+                    Integer color = (identity.color == null ? identity.accountColor : identity.color);
+                    String name = identity.getDisplayName();
+                    options.add(new eu.faircode.email.ui.SelectOption(
+                            color,
+                            TextUtils.isEmpty(name) ? "-" : name,
+                            identity.email));
+                }
+
+                dview.setOptions(options, new eu.faircode.email.ui.SelectListDialogComposeView.OnItemSelectedListener() {
                     @Override
-                    public void onSelected(TupleIdentityEx identity) {
+                    public void onSelected(int index) {
+                        TupleIdentityEx identity = identities.get(index);
                         Bundle args = getArguments();
                         args.putLong("id", identity.id);
                         args.putString("html", identity.signature);
@@ -105,7 +109,6 @@ public class FragmentDialogSelectIdentity extends FragmentDialogBase {
                         dialog.dismiss();
                     }
                 });
-                rvSelect.setAdapter(adapter);
             }
 
             @Override
