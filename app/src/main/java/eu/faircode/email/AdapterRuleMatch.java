@@ -50,16 +50,11 @@ public class AdapterRuleMatch extends RecyclerView.Adapter<AdapterRuleMatch.View
     private DateFormat DTF;
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        private View view;
-        private TextView tvTime;
-        private TextView tvSubject;
+        private eu.faircode.email.ui.RuleMatchItemComposeView itemView;
 
-        ViewHolder(View itemView) {
+        ViewHolder(eu.faircode.email.ui.RuleMatchItemComposeView itemView) {
             super(itemView);
-
-            view = itemView.findViewById(R.id.clItem);
-            tvTime = itemView.findViewById(R.id.tvTime);
-            tvSubject = itemView.findViewById(R.id.tvSubject);
+            this.itemView = itemView;
         }
 
         private void wire() {
@@ -69,8 +64,10 @@ public class AdapterRuleMatch extends RecyclerView.Adapter<AdapterRuleMatch.View
         }
 
         private void bindTo(EntityMessage message) {
-            tvTime.setText(D.format(message.received) + " " + DTF.format(message.received));
-            tvSubject.setText(message.subject);
+            itemView.bind(
+                    D.format(message.received) + " " + DTF.format(message.received),
+                    message.subject == null ? "" : message.subject
+            );
         }
     }
 
@@ -176,7 +173,7 @@ public class AdapterRuleMatch extends RecyclerView.Adapter<AdapterRuleMatch.View
     @Override
     @NonNull
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        return new ViewHolder(inflater.inflate(R.layout.item_rule_match, parent, false));
+        return new ViewHolder(eu.faircode.email.ui.ComposeContentHelper.createRuleMatchItemView(parent.getContext()));
     }
 
     @Override

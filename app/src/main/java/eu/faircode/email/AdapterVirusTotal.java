@@ -49,16 +49,11 @@ public class AdapterVirusTotal extends RecyclerView.Adapter<AdapterVirusTotal.Vi
     private List<VirusTotal.ScanResult> items = new ArrayList<>();
 
     public class ViewHolder extends RecyclerView.ViewHolder {
-        private View view;
-        private TextView tvName;
-        private TextView tvCategory;
+        private eu.faircode.email.ui.VirusTotalItemComposeView itemView;
 
-        ViewHolder(View itemView) {
+        ViewHolder(eu.faircode.email.ui.VirusTotalItemComposeView itemView) {
             super(itemView);
-
-            view = itemView.findViewById(R.id.clItem);
-            tvName = itemView.findViewById(R.id.tvName);
-            tvCategory = itemView.findViewById(R.id.tvCategory);
+            this.itemView = itemView;
         }
 
         private void wire() {
@@ -69,10 +64,11 @@ public class AdapterVirusTotal extends RecyclerView.Adapter<AdapterVirusTotal.Vi
 
         private void bindTo(VirusTotal.ScanResult scan) {
             boolean malicious = "malicious".equals(scan.category);
-            tvName.setText(scan.name);
-            tvCategory.setText(scan.category);
-            tvCategory.setTextColor(malicious ? colorWarning : textColorSecondary);
-            tvCategory.setTypeface(malicious ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
+            itemView.bind(
+                    scan.name == null ? "" : scan.name,
+                    scan.category == null ? "" : scan.category,
+                    malicious
+            );
         }
     }
 
@@ -178,7 +174,7 @@ public class AdapterVirusTotal extends RecyclerView.Adapter<AdapterVirusTotal.Vi
     @Override
     @NonNull
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        return new ViewHolder(inflater.inflate(R.layout.item_virus_total, parent, false));
+        return new ViewHolder(eu.faircode.email.ui.ComposeContentHelper.createVirusTotalItemView(parent.getContext()));
     }
 
     @Override

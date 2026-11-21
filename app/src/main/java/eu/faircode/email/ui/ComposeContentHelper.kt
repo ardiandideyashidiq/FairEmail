@@ -302,4 +302,24 @@ object ComposeContentHelper {
             )
         }
     }
+
+    @JvmStatic
+    fun createVirusTotalItemView(context: Context): VirusTotalItemComposeView {
+        return VirusTotalItemComposeView(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
+
+    @JvmStatic
+    fun createRuleMatchItemView(context: Context): RuleMatchItemComposeView {
+        return RuleMatchItemComposeView(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
 }
