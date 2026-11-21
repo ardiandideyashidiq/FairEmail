@@ -173,4 +173,52 @@ object ComposeContentHelper {
             )
         }
     }
+
+    @JvmStatic
+    fun createShortcutLabelDialogView(context: Context): SingleInputDialogComposeView {
+        return SingleInputDialogComposeView(
+            context = context,
+            titleIconRes = eu.faircode.email.R.drawable.twotone_edit_24,
+            titleRes = eu.faircode.email.R.string.title_pin_label,
+            capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences
+        ).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
+
+    @JvmStatic
+    fun createPromptDialogView(context: Context): SingleInputDialogComposeView {
+        return SingleInputDialogComposeView(
+            context = context,
+            titleIconRes = eu.faircode.email.R.drawable.twotone_sticky_note_2_24,
+            titleRes = eu.faircode.email.R.string.title_advanced_summarize_prompt,
+            singleLine = false,
+            capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences,
+            autoCorrectEnabled = true
+        ).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
+
+    @JvmStatic
+    fun createEditNameDialogView(context: Context): SingleInputDialogComposeView {
+        return SingleInputDialogComposeView(
+            context = context,
+            titleIconRes = eu.faircode.email.R.drawable.twotone_edit_24,
+            titleRes = eu.faircode.email.R.string.title_advanced_edit_name,
+            capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Words,
+            checkboxLabelRes = eu.faircode.email.R.string.title_primary
+        ).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
 }

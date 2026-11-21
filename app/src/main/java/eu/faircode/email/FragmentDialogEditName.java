@@ -43,28 +43,25 @@ public class FragmentDialogEditName extends FragmentDialogBase {
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         final Context context = getContext();
-        View view = LayoutInflater.from(context).inflate(R.layout.dialog_edit_name, null);
-        final EditText etName = view.findViewById(R.id.etName);
-        final CheckBox cbPrimary = view.findViewById(R.id.cbPrimary);
+        final eu.faircode.email.ui.SingleInputDialogComposeView view =
+                eu.faircode.email.ui.ComposeContentHelper.createEditNameDialogView(context);
 
         Bundle args = getArguments();
-        etName.setText(args.getString("name"));
-        cbPrimary.setChecked(args.getBoolean("primary"));
-        cbPrimary.setVisibility(args.containsKey("primary") ? View.VISIBLE : View.GONE);
+        view.setText(args.getString("name"));
+        view.setChecked(args.getBoolean("primary"));
+        view.setShowCheckbox(args.containsKey("primary"));
+        view.requestInputFocus();
 
-        etName.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+        view.setOnDoneListener(new Runnable() {
             @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId != EditorInfo.IME_ACTION_DONE)
-                    return false;
+            public void run() {
                 AlertDialog dialog = (AlertDialog) getDialog();
                 if (dialog == null)
-                    return false;
+                    return;
                 Button btnOk = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
                 if (btnOk == null)
-                    return false;
+                    return;
                 btnOk.performClick();
-                return true;
             }
         });
 
@@ -73,8 +70,8 @@ public class FragmentDialogEditName extends FragmentDialogBase {
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        args.putString("name", etName.getText().toString());
-                        args.putBoolean("primary", cbPrimary.isChecked());
+                        args.putString("name", view.getText());
+                        args.putBoolean("primary", view.isChecked());
                         sendResult(RESULT_OK);
                     }
                 })

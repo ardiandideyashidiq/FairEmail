@@ -98,16 +98,17 @@ public class FragmentDialogAccount extends FragmentDialogBase {
         ibEditName.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                View e = LayoutInflater.from(context).inflate(R.layout.dialog_edit_name, null);
-                EditText etName = e.findViewById(R.id.etName);
-                etName.setText(tvName.getText());
+                final eu.faircode.email.ui.SingleInputDialogComposeView e =
+                        eu.faircode.email.ui.ComposeContentHelper.createEditNameDialogView(context);
+                e.setText(tvName.getText());
+                e.requestInputFocus();
 
                 new AlertDialog.Builder(context)
                         .setView(e)
                         .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                             @Override
                             public void onClick(DialogInterface dialog, int which) {
-                                String name = etName.getText().toString();
+                                String name = e.getText();
                                 if (TextUtils.isEmpty(name))
                                     return;
 

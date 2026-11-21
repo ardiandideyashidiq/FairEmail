@@ -7792,17 +7792,18 @@ public class AdapterMessage extends RecyclerView.Adapter<AdapterMessage.ViewHold
         }
 
         private void onMenuPin(TupleMessageEx message) {
-            View view = LayoutInflater.from(context).inflate(R.layout.dialog_shortcut_label, null);
-            EditText etLabel = view.findViewById(R.id.etLabel);
+            final eu.faircode.email.ui.SingleInputDialogComposeView view =
+                    eu.faircode.email.ui.ComposeContentHelper.createShortcutLabelDialogView(context);
 
-            etLabel.setText(message.subject);
+            view.setText(message.subject);
+            view.requestInputFocus();
 
             new AlertDialog.Builder(context)
                     .setView(view)
                     .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            String label = etLabel.getText().toString().trim();
+                            String label = view.getText().trim();
                             if (!TextUtils.isEmpty(label))
                                 _onMenuPin(message, label);
                         }

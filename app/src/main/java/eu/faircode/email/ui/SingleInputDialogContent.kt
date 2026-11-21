@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -50,10 +52,15 @@ fun SingleInputDialogContent(
     hint: String? = null,
     @DrawableRes leadingIconRes: Int = 0,
     enabled: Boolean = true,
+    singleLine: Boolean = true,
     isPassword: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Text,
     capitalization: KeyboardCapitalization = KeyboardCapitalization.None,
     autoCorrectEnabled: Boolean = false,
+    showCheckbox: Boolean = false,
+    @StringRes checkboxLabelRes: Int = 0,
+    checked: Boolean = false,
+    onCheckedChange: (Boolean) -> Unit = {},
     onDone: () -> Unit = {},
     focusRequester: FocusRequester = remember { FocusRequester() },
     modifier: Modifier = Modifier
@@ -61,6 +68,7 @@ fun SingleInputDialogContent(
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
             .padding(24.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -78,7 +86,7 @@ fun SingleInputDialogContent(
             value = value,
             onValueChange = onValueChange,
             enabled = enabled,
-            singleLine = true,
+            singleLine = singleLine,
             placeholder = hint?.let { { Text(text = it) } },
             leadingIcon = if (leadingIconRes != 0) {
                 {
@@ -101,6 +109,14 @@ fun SingleInputDialogContent(
                 .padding(top = 24.dp)
                 .focusRequester(focusRequester)
         )
+        if (showCheckbox && checkboxLabelRes != 0) {
+            CheckboxRowItem(
+                text = stringResource(checkboxLabelRes),
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+                modifier = Modifier.padding(top = 12.dp)
+            )
+        }
     }
 }
 
@@ -109,15 +125,19 @@ class SingleInputDialogComposeView(
     @DrawableRes private val titleIconRes: Int,
     @StringRes private val titleRes: Int,
     private val keyboardType: KeyboardType = KeyboardType.Text,
+    private val singleLine: Boolean = true,
     private val isPassword: Boolean = false,
     private val capitalization: KeyboardCapitalization = KeyboardCapitalization.None,
-    private val autoCorrectEnabled: Boolean = false
+    private val autoCorrectEnabled: Boolean = false,
+    @StringRes private val checkboxLabelRes: Int = 0
 ) : AbstractComposeView(context) {
 
     private var textState by mutableStateOf("")
     private var hintState by mutableStateOf<String?>(null)
     private var leadingIconResState by mutableIntStateOf(0)
     private var enabledState by mutableStateOf(true)
+    private var showCheckboxState by mutableStateOf(false)
+    private var checkedState by mutableStateOf(false)
     private var focusTrigger by mutableIntStateOf(0)
     private var onDoneListener: Runnable? = null
 
@@ -141,6 +161,16 @@ class SingleInputDialogComposeView(
 
     fun setLeadingIconRes(@DrawableRes iconRes: Int) {
         leadingIconResState = iconRes
+    }
+
+    fun setShowCheckbox(show: Boolean) {
+        showCheckboxState = show
+    }
+
+    fun isChecked(): Boolean = checkedState
+
+    fun setChecked(checked: Boolean) {
+        checkedState = checked
     }
 
     override fun setEnabled(enabled: Boolean) {
@@ -177,10 +207,15 @@ class SingleInputDialogComposeView(
                 hint = hintState,
                 leadingIconRes = leadingIconResState,
                 enabled = enabledState,
+                singleLine = singleLine,
                 isPassword = isPassword,
                 keyboardType = keyboardType,
                 capitalization = capitalization,
                 autoCorrectEnabled = autoCorrectEnabled,
+                showCheckbox = showCheckboxState,
+                checkboxLabelRes = checkboxLabelRes,
+                checked = checkedState,
+                onCheckedChange = { checkedState = it },
                 onDone = { onDoneListener?.run() },
                 focusRequester = focusRequester
             )
