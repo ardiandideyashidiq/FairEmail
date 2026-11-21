@@ -19,7 +19,6 @@ package eu.faircode.email;
     Copyright 2018-2026 by Marcel Bokhorst (M66B)
 */
 
-import static eu.faircode.email.ServiceAuthenticator.AUTH_TYPE_GRAPH;
 
 import android.Manifest;
 import android.app.AlarmManager;
@@ -524,40 +523,6 @@ public class ServiceSend extends ServiceBase implements SharedPreferences.OnShar
                                     NotificationCompat.Builder builder = getNotificationError(
                                             MessageHelper.formatAddressesShort(message.to), ex, tries_left);
 
-                                    if (ex instanceof AuthenticationFailedException &&
-                                            ex.getMessage() != null &&
-                                            ex.getMessage().contains("535 5.7.3 Authentication unsuccessful")) {
-                                        EntityIdentity identity = db.identity().getIdentity(message.identity);
-                                        if (identity == null) {
-                                            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(Helper.SUPPORT_URI))
-                                                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                            PendingIntent piFix = PendingIntentCompat.getActivity(
-                                                    this, PI_FIX, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-                                            builder.setContentIntent(piFix);
-                                        } else {
-                                            EntityAccount account = db.account().getAccount(identity.account);
-                                            int protocol = (account == null ? -1 : account.protocol);
-
-                                            Intent intent = new Intent(this, ActivityError.class);
-                                            intent.setAction("535:" + identity.id);
-                                            intent.putExtra("title", new ThrowableWrapper(ex).getSafeMessage());
-                                            intent.putExtra("message", Log.formatThrowable(ex, "\n", false));
-                                            intent.putExtra("provider", "outlookgraph");
-                                            intent.putExtra("account", identity.account);
-                                            intent.putExtra("protocol", protocol);
-                                            intent.putExtra("auth_type", AUTH_TYPE_GRAPH);
-                                            intent.putExtra("host", identity.host);
-                                            intent.putExtra("identity", identity.id);
-                                            intent.putExtra("personal", identity.name);
-                                            intent.putExtra("address", identity.user);
-                                            intent.putExtra("faq", 14);
-                                            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                                            PendingIntent pi = PendingIntentCompat.getActivity(
-                                                    this, ActivityError.PI_ERROR, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-                                            builder.setContentIntent(pi);
-                                        }
-                                    }
-
                                     nm.notify("send:" + message.id,
                                             NotificationHelper.NOTIFICATION_TAGGED,
                                             builder.build());
@@ -803,11 +768,7 @@ public class ServiceSend extends ServiceBase implements SharedPreferences.OnShar
         long end = 0;
         Long max_size = null;
         SendFailedException partial = null;
-        if (ident.auth_type == AUTH_TYPE_GRAPH) {
-            start = new Date().getTime();
-            MicrosoftGraph.send(ServiceSend.this, ident, imessage);
-            end = new Date().getTime();
-        } else {
+        {
             if (account != null)
                 try (EmailService iaccount = new EmailService(this, account, EmailService.PURPOSE_USE, debug)) {
                     iaccount.connect(account);

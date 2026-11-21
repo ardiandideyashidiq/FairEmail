@@ -69,7 +69,6 @@ public class ServiceAuthenticator extends Authenticator {
     static final int AUTH_TYPE_PASSWORD = 1;
     static final int AUTH_TYPE_GMAIL = 2;
     static final int AUTH_TYPE_OAUTH = 3;
-    static final int AUTH_TYPE_GRAPH = 4;
 
     static final long MIN_REFRESH_INTERVAL = 15 * 60 * 1000L;
     static final long MIN_FORCE_REFRESH_INTERVAL = 15 * 60 * 1000L;
@@ -204,7 +203,7 @@ public class ServiceAuthenticator extends Authenticator {
 
             ClientAuthentication clientAuth;
             EmailProvider provider = EmailProvider.getProvider(context, id);
-            EmailProvider.OAuth oauth = (auth_type == AUTH_TYPE_GRAPH ? provider.graph : provider.oauth);
+            EmailProvider.OAuth oauth = provider.oauth;
 
             if (oauth.clientSecret == null)
                 clientAuth = NoClientAuthentication.INSTANCE;
@@ -272,8 +271,6 @@ public class ServiceAuthenticator extends Authenticator {
             return "gmail";
         else if (auth_type == AUTH_TYPE_OAUTH)
             return "oauth";
-        else if (auth_type == AUTH_TYPE_GRAPH)
-            return "graph";
         else
             return "?" + auth_type;
     }

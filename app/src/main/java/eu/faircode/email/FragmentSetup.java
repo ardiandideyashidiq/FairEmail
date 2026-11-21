@@ -74,22 +74,6 @@ import androidx.preference.PreferenceManager;
 
 import com.google.android.material.snackbar.Snackbar;
 
-import net.openid.appauth.AppAuthConfiguration;
-import net.openid.appauth.AuthState;
-import net.openid.appauth.AuthorizationException;
-import net.openid.appauth.AuthorizationRequest;
-import net.openid.appauth.AuthorizationResponse;
-import net.openid.appauth.AuthorizationService;
-import net.openid.appauth.AuthorizationServiceConfiguration;
-import net.openid.appauth.ClientAuthentication;
-import net.openid.appauth.ClientSecretPost;
-import net.openid.appauth.GrantTypeValues;
-import net.openid.appauth.NoClientAuthentication;
-import net.openid.appauth.ResponseTypeValues;
-import net.openid.appauth.TokenRequest;
-import net.openid.appauth.TokenResponse;
-
-import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -127,8 +111,6 @@ public class FragmentSetup extends FragmentBase implements SharedPreferences.OnS
     private Button btnPermissions;
     private TextView tvPermissionsWhy;
     private TextView tvImportContacts;
-    private ImageButton ibGraphContacts;
-    private Button btnGraphContacts;
 
     private TextView tvDozeDone;
     private Button btnDoze;
@@ -159,7 +141,6 @@ public class FragmentSetup extends FragmentBase implements SharedPreferences.OnS
     private Button btnSupport;
     private ImageButton ibExtra;
 
-    private Group grpGraphContacts;
     private Group grpBackgroundRestricted;
     private Group grpDataSaver;
     private Group grpSupport;
@@ -171,8 +152,6 @@ public class FragmentSetup extends FragmentBase implements SharedPreferences.OnS
     private Drawable done;
 
     private boolean manual = false;
-
-    private static final String GRAPH_SCOPE_READ_CONTACTS = "https://graph.microsoft.com/Contacts.Read";
 
     @Override
     @Nullable
@@ -224,8 +203,6 @@ public class FragmentSetup extends FragmentBase implements SharedPreferences.OnS
         btnPermissions = view.findViewById(R.id.btnPermissions);
         tvPermissionsWhy = view.findViewById(R.id.tvPermissionsWhy);
         tvImportContacts = view.findViewById(R.id.tvImportContacts);
-        ibGraphContacts = view.findViewById(R.id.ibGraphContacts);
-        btnGraphContacts = view.findViewById(R.id.btnGraphContacts);
 
         tvDozeDone = view.findViewById(R.id.tvDozeDone);
         btnDoze = view.findViewById(R.id.btnDoze);
@@ -256,7 +233,7 @@ public class FragmentSetup extends FragmentBase implements SharedPreferences.OnS
         btnSupport = view.findViewById(R.id.btnSupport);
         ibExtra = view.findViewById(R.id.ibExtra);
 
-        grpGraphContacts = view.findViewById(R.id.grpGraphContacts);
+        view.findViewById(R.id.grpGraphContacts).setVisibility(View.GONE);
         grpBackgroundRestricted = view.findViewById(R.id.grpBackgroundRestricted);
         grpDataSaver = view.findViewById(R.id.grpDataSaver);
         grpSupport = view.findViewById(R.id.grpSupport);
@@ -339,9 +316,6 @@ public class FragmentSetup extends FragmentBase implements SharedPreferences.OnS
                 // OAuth
                 order = getMenuItems(menu, context, providers, order, false, debug);
 
-                menu.add(Menu.NONE, R.string.title_setup_other, order++, R.string.title_setup_other)
-                        .setIcon(R.drawable.twotone_auto_fix_high_24);
-
                 // Gmail / account manager
                 {
                     Resources res = context.getResources();
@@ -357,14 +331,6 @@ public class FragmentSetup extends FragmentBase implements SharedPreferences.OnS
                 }
 
                 order = getMenuItems(menu, context, providers, order, true, debug);
-
-                SpannableString imap = new SpannableString(getString(R.string.title_setup_imap));
-                imap.setSpan(new RelativeSizeSpan(HtmlHelper.FONT_SMALL), 0, imap.length(), 0);
-                menu.add(Menu.FIRST, R.string.title_setup_imap, order++, imap);
-
-                SpannableString pop3 = new SpannableString(getString(R.string.title_setup_pop3));
-                pop3.setSpan(new RelativeSizeSpan(HtmlHelper.FONT_SMALL), 0, pop3.length(), 0);
-                menu.add(Menu.FIRST, R.string.title_setup_pop3, order++, pop3);
 
                 popupMenu.insertIcons(context);
 
@@ -392,29 +358,6 @@ public class FragmentSetup extends FragmentBase implements SharedPreferences.OnS
                                         })
                                         .setNegativeButton(android.R.string.cancel, null)
                                         .show();
-                            return true;
-                        } else if (itemId == R.string.title_setup_other) {
-                            lbm.sendBroadcast(new Intent(ActivitySetup.ACTION_QUICK_SETUP)
-                                    .putExtra("title", itemId));
-                            return true;
-                        } else if (itemId == R.string.title_setup_imap) {
-                            ibManual.setPressed(true);
-                            ibManual.setPressed(false);
-                            manual = true;
-                            updateManual();
-                            view.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    try {
-                                        scrollTo(R.id.ibManual, 0);
-                                    } catch (Throwable ex) {
-                                        Log.e(ex);
-                                    }
-                                }
-                            });
-                            return true;
-                        } else if (itemId == R.string.title_setup_pop3) {
-                            lbm.sendBroadcast(new Intent(ActivitySetup.ACTION_QUICK_POP3));
                             return true;
                         } else if (itemId == R.string.menu_faq) {
                             Helper.view(getContext(), Helper.getSupportUri(getContext(), "Providers:support"), false);
@@ -467,7 +410,7 @@ public class FragmentSetup extends FragmentBase implements SharedPreferences.OnS
                                         .putExtra("name", provider.description)
                                         .putExtra("privacy", provider.oauth.privacy)
                                         .putExtra("askAccount", provider.oauth.askAccount)
-                                        .putExtra("askTenant", (provider.graph == null && provider.oauth.askTenant()))
+                                        .putExtra("askTenant", provider.oauth.askTenant())
                                         .putExtra("pop", provider.pop != null));
                         // https://developers.google.com/identity/branding-guidelines
                         int resid = res.getIdentifier("provider_" + provider.id, "drawable", pkg);
@@ -610,27 +553,6 @@ public class FragmentSetup extends FragmentBase implements SharedPreferences.OnS
             @Override
             public void onClick(View v) {
                 Helper.viewFAQ(v.getContext(), 172);
-            }
-        });
-
-        ibGraphContacts.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Helper.viewFAQ(v.getContext(), 193);
-            }
-        });
-
-        btnGraphContacts.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Bundle args = new Bundle();
-                args.putInt("type", EntityAccount.TYPE_IMAP);
-                args.putString("filter", "outlook");
-
-                FragmentDialogSelectAccount fragment = new FragmentDialogSelectAccount();
-                fragment.setArguments(args);
-                fragment.setTargetFragment(FragmentSetup.this, ActivitySetup.REQUEST_GRAPH_CONTACTS);
-                fragment.show(getParentFragmentManager(), "account:contacts");
             }
         });
 
@@ -900,7 +822,6 @@ public class FragmentSetup extends FragmentBase implements SharedPreferences.OnS
 
         btnInbox.setEnabled(false);
 
-        grpGraphContacts.setVisibility(View.GONE);
         grpBackgroundRestricted.setVisibility(View.GONE);
         grpDataSaver.setVisibility(View.GONE);
         tvStamina.setVisibility(View.GONE);
@@ -975,16 +896,6 @@ public class FragmentSetup extends FragmentBase implements SharedPreferences.OnS
                 btnIdentity.setEnabled(done);
                 btnInbox.setEnabled(done);
                 btnInbox.setTypeface(done ? Typeface.DEFAULT_BOLD : Typeface.DEFAULT);
-
-                boolean outlook = false;
-                if (accounts != null)
-                    for (EntityAccount account : accounts)
-                        if (account.isOutlook()) {
-                            outlook = true;
-                            break;
-                        }
-
-                grpGraphContacts.setVisibility(outlook ? View.VISIBLE : View.GONE);
 
                 prefs.edit().putBoolean("has_accounts", done).apply();
             }
@@ -1179,14 +1090,6 @@ public class FragmentSetup extends FragmentBase implements SharedPreferences.OnS
                     if (resultCode == RESULT_OK && data != null)
                         onDeleteAccount(data.getBundleExtra("args"));
                     break;
-                case ActivitySetup.REQUEST_GRAPH_CONTACTS:
-                    if (resultCode == RESULT_OK && data != null)
-                        handleImportGraphContacts(data.getBundleExtra("args"));
-                    break;
-                case ActivitySetup.REQUEST_GRAPH_CONTACTS_OAUTH:
-                    if (resultCode == RESULT_OK && data != null)
-                        onHandleGraphContactsOAuth(data);
-                    break;
             }
         } catch (Throwable ex) {
             Log.e(ex);
@@ -1335,177 +1238,6 @@ public class FragmentSetup extends FragmentBase implements SharedPreferences.OnS
                 })
                 .show();
     }
-
-    private void handleImportGraphContacts(Bundle args) {
-        final Context context = getContext();
-        try {
-            long account = args.getLong("account");
-            String user = args.getString("user");
-            EmailProvider provider = EmailProvider.getProvider(context, "outlookgraph");
-
-            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-            prefs.edit().putBoolean("suggest_sent", true).apply();
-
-            if (BuildConfig.DEBUG) {
-                String json = prefs.getString("graph.contacts." + account, null);
-                if (!TextUtils.isEmpty(json)) {
-                    args.putString("authState", json);
-                    taskGraph.execute(this, args, "graph:contacts");
-                    return;
-                }
-            }
-
-            AppAuthConfiguration appAuthConfig = new AppAuthConfiguration.Builder()
-                    .build();
-            AuthorizationService authService = new AuthorizationService(context, appAuthConfig);
-
-            AuthorizationServiceConfiguration serviceConfig = new AuthorizationServiceConfiguration(
-                    Uri.parse(provider.graph.authorizationEndpoint),
-                    Uri.parse(provider.graph.tokenEndpoint));
-
-            AuthorizationRequest.Builder authRequestBuilder =
-                    new AuthorizationRequest.Builder(
-                            serviceConfig,
-                            provider.graph.clientId,
-                            ResponseTypeValues.CODE,
-                            Uri.parse(provider.graph.redirectUri))
-                            .setScopes(GRAPH_SCOPE_READ_CONTACTS)
-                            .setState(provider.id + ":" + account)
-                            .setLoginHint(user);
-
-            if (!TextUtils.isEmpty(provider.graph.prompt))
-                authRequestBuilder.setPrompt(provider.graph.prompt);
-
-            Intent authIntent = authService.getAuthorizationRequestIntent(authRequestBuilder.build());
-            EntityLog.log(context, "Graph/contacts intent=" + authIntent);
-            startActivityForResult(authIntent, ActivitySetup.REQUEST_GRAPH_CONTACTS_OAUTH);
-        } catch (Throwable ex) {
-            EntityLog.log(context, "Graph/contacts ex=" + Log.formatThrowable(ex, false));
-            Log.unexpectedError(getParentFragmentManager(), ex);
-        }
-    }
-
-    private void onHandleGraphContactsOAuth(@NonNull Intent data) {
-        final Context context = getContext();
-        try {
-            EntityLog.log(context, "Graph/contacts authorized");
-
-            AuthorizationResponse auth = AuthorizationResponse.fromIntent(data);
-            if (auth == null) {
-                AuthorizationException ex = AuthorizationException.fromIntent(data);
-                if (ex == null)
-                    throw new IllegalArgumentException("No response data");
-                else
-                    throw ex;
-            }
-
-            final AuthState authState = new AuthState(auth, null);
-            final EmailProvider provider = EmailProvider.getProvider(context, "outlookgraph");
-
-            AuthorizationService authService = new AuthorizationService(context);
-
-            ClientAuthentication clientAuth;
-            if (provider.graph.clientSecret == null)
-                clientAuth = NoClientAuthentication.INSTANCE;
-            else
-                clientAuth = new ClientSecretPost(provider.graph.clientSecret);
-
-            TokenRequest.Builder builder = new TokenRequest.Builder(
-                    auth.request.configuration,
-                    auth.request.clientId)
-                    .setGrantType(GrantTypeValues.AUTHORIZATION_CODE)
-                    .setRedirectUri(auth.request.redirectUri)
-                    .setCodeVerifier(auth.request.codeVerifier)
-                    .setAuthorizationCode(auth.authorizationCode)
-                    .setNonce(auth.request.nonce);
-
-            if (provider.graph.tokenScopes)
-                builder.setScope(GRAPH_SCOPE_READ_CONTACTS);
-
-            authService.performTokenRequest(
-                    builder.build(),
-                    clientAuth,
-                    new AuthorizationService.TokenResponseCallback() {
-                        @Override
-                        public void onTokenRequestCompleted(TokenResponse access, AuthorizationException error) {
-                            try {
-                                if (error != null)
-                                    throw error;
-
-                                if (access == null || access.accessToken == null)
-                                    throw new IllegalStateException("No access token");
-
-                                authState.update(access, null);
-                                EntityLog.log(context, "Graph/contacts got token");
-
-                                int semi = auth.request.state.lastIndexOf(':');
-                                long account = Long.parseLong(auth.request.state.substring(semi + 1));
-
-                                Bundle args = new Bundle();
-                                args.putLong("account", account);
-                                args.putString("authState", authState.jsonSerializeString());
-
-                                taskGraph.execute(FragmentSetup.this, args, "graph:contacts");
-                            } catch (Throwable ex) {
-                                try {
-                                    Log.unexpectedError(getParentFragmentManager(), ex);
-                                } catch (Throwable exex) {
-                                    Log.w(exex);
-                                }
-                            }
-                        }
-                    });
-        } catch (Throwable ex) {
-            EntityLog.log(context, "Graph/contacts ex=" + Log.formatThrowable(ex, false));
-            boolean report = true;
-            if (ex instanceof AuthorizationException) {
-                // {"type":1,"code":1002,"error":"access_denied","errorDescription":"The user has denied access to the scope requested by the client application."}
-                AuthorizationException auth = (AuthorizationException) ex;
-                Log.w("Authorization type=" + auth.type + " code=" + auth.code + " error=" + auth.error + ": " + auth.errorDescription);
-                if (auth.type == 1 && auth.code == 1002 && "access_denied".equals(auth.error))
-                    report = false;
-            }
-            Log.unexpectedError(getParentFragmentManager(), ex, report);
-        }
-    }
-
-    private final SimpleTask<Integer> taskGraph = new SimpleTask<Integer>() {
-        @Override
-        protected Integer onExecute(Context context, Bundle args) throws Throwable {
-            long account = args.getLong("account");
-            String json = args.getString("authState");
-            AuthState authState = AuthState.jsonDeserialize(json);
-
-            return MicrosoftGraph.downloadContacts(context, account, authState);
-        }
-
-        @Override
-        protected void onExecuted(Bundle args, @NonNull Integer count) {
-            final Context context = getContext();
-            EntityLog.log(context, "Graph/contacts count=" + count);
-
-            NumberFormat NF = NumberFormat.getInstance();
-            String msg = getString(R.string.title_setup_import_graph_new, NF.format(count));
-
-            final Snackbar snackbar = Helper.setSnackbarOptions(
-                    Snackbar.make(view, msg, Snackbar.LENGTH_INDEFINITE));
-            snackbar.setAction(R.string.title_check, new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    snackbar.dismiss();
-                    LocalBroadcastManager lbm = LocalBroadcastManager.getInstance(v.getContext());
-                    lbm.sendBroadcast(new Intent(ActivitySetup.ACTION_MANAGE_LOCAL_CONTACTS));
-                }
-            });
-            snackbar.show();
-        }
-
-        @Override
-        protected void onException(Bundle args, Throwable ex) {
-            EntityLog.log(getContext(), "Graph/contacts ex=" + Log.formatThrowable(ex, false));
-            Log.unexpectedError(getParentFragmentManager(), ex);
-        }
-    };
 
     private final ConnectivityManager.NetworkCallback networkCallback = new ConnectivityManager.NetworkCallback() {
         @Override

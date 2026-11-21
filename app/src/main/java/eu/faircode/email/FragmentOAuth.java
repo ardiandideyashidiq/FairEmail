@@ -20,7 +20,6 @@ package eu.faircode.email;
 */
 
 import static android.app.Activity.RESULT_OK;
-import static eu.faircode.email.ServiceAuthenticator.AUTH_TYPE_GRAPH;
 import static eu.faircode.email.ServiceAuthenticator.AUTH_TYPE_OAUTH;
 
 import android.content.ActivityNotFoundException;
@@ -145,7 +144,6 @@ public class FragmentOAuth extends FragmentBase {
 
     private static final String FAIREMAIL_RANDOM = "fairemail.random";
     private static final String FAIREMAIL_EXPIRE = "fairemail.expire";
-    private static final int MAILRU_TIMEOUT = 20 * 1000; // milliseconds
     private static final long OAUTH_TIMEOUT = 20 * 60 * 1000L;
 
     @Override
@@ -296,7 +294,7 @@ public class FragmentOAuth extends FragmentBase {
         btnOAuth.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                onAuthorize(false);
+                onAuthorize();
             }
         });
 
@@ -319,8 +317,6 @@ public class FragmentOAuth extends FragmentBase {
             }
         });
 
-        boolean isOutlook = ("office365".equals(id) || "office365pcke".equals(id) || "outlookgraph".equals(id) || "outlook".equals(id));
-
         // Initialize
         tvTitle.setText(getString(R.string.title_setup_oauth_rationale, name));
         etName.setVisibility(askAccount ? View.VISIBLE : View.GONE);
@@ -333,8 +329,8 @@ public class FragmentOAuth extends FragmentBase {
         tvGmailHint.setVisibility("gmail".equals(id) ? View.VISIBLE : View.GONE);
         tvGmailLoginHint.setVisibility("gmail".equals(id) ? View.VISIBLE : View.GONE);
         tvGmailLoginMax.setVisibility("gmail".equals(id) ? View.VISIBLE : View.GONE);
-        tvOutlookHint.setVisibility("outlookgraph".equals(id) ? View.VISIBLE : View.GONE);
-        tvOutlookPasskeyHint.setVisibility(isOutlook ? View.VISIBLE : View.GONE);
+        tvOutlookHint.setVisibility(View.GONE);
+        tvOutlookPasskeyHint.setVisibility(View.GONE);
         hideError();
 
         etName.setText(personal);
@@ -370,7 +366,7 @@ public class FragmentOAuth extends FragmentBase {
         }
     }
 
-    private void onAuthorize(boolean graph) {
+    private void onAuthorize() {
         try {
             if (!getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED))
                 return;
@@ -417,7 +413,7 @@ public class FragmentOAuth extends FragmentBase {
 
             final Context context = getContext();
             EmailProvider provider = EmailProvider.getProvider(context, id);
-            EmailProvider.OAuth oauth = (graph ? provider.graph : provider.oauth);
+            EmailProvider.OAuth oauth = provider.oauth;
 
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
             boolean oauth_tabs = prefs.getBoolean("oauth_tabs", false);
@@ -464,7 +460,7 @@ public class FragmentOAuth extends FragmentBase {
             int random = Math.abs(new SecureRandom().nextInt());
             long expire = new Date().getTime() + OAUTH_TIMEOUT;
             AuthState authState = new AuthState(serviceConfig);
-            String key = "oauth." + provider.id + (graph ? ":graph" : "");
+            String key = "oauth." + provider.id;
             JSONObject jauthstate = authState.jsonSerialize();
             jauthstate.put(FAIREMAIL_RANDOM, random);
             jauthstate.put(FAIREMAIL_EXPIRE, expire);
@@ -489,7 +485,7 @@ public class FragmentOAuth extends FragmentBase {
                             ResponseTypeValues.CODE,
                             redirectUri)
                             .setScopes(oauth.scopes)
-                            .setState(provider.id + ":" + random + ":" + (graph ? ":graph" : ""))
+                            .setState(provider.id + ":" + random + ":")
                             .setAdditionalParameters(params);
 
             if (askAccount) {
@@ -581,17 +577,11 @@ public class FragmentOAuth extends FragmentBase {
 
             String id = auth.state.split(":")[0];
             int returnedRandom = Integer.parseInt(auth.state.split(":")[1]);
-            boolean graph = auth.state.endsWith(":graph");
             final EmailProvider provider = EmailProvider.getProvider(getContext(), id);
-            EmailProvider.OAuth oauth = (graph ? provider.graph : provider.oauth);
-
-            if (provider.graph != null &&
-                    provider.graph.enabled &&
-                    !graph)
-                setEnabled(false);
+            EmailProvider.OAuth oauth = provider.oauth;
 
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
-            String key = "oauth." + provider.id + (graph ? ":graph" : "");
+            String key = "oauth." + provider.id;
             String json = prefs.getString(key, null);
             JSONObject jauthstate = new JSONObject(json);
             int random = jauthstate.optInt(FAIREMAIL_RANDOM, -1);
@@ -654,26 +644,10 @@ public class FragmentOAuth extends FragmentBase {
 
                                 authState.update(access, null);
 
-                                if (provider.graph == null || !provider.graph.enabled)
-                                    onOAuthorized(
-                                            new String[]{access.accessToken},
-                                            new String[]{access.idToken},
-                                            new AuthState[]{authState});
-                                else {
-                                    if (graph) {
-                                        String key0 = "oauth." + provider.id;
-                                        String json0 = prefs.getString(key0, null);
-                                        prefs.edit().remove(key0).apply();
-                                        AuthState state0 = AuthState.jsonDeserialize(json0);
-                                        onOAuthorized(
-                                                new String[]{state0.getAccessToken(), authState.getAccessToken()},
-                                                new String[]{state0.getIdToken(), authState.getIdToken()},
-                                                new AuthState[]{state0, authState});
-                                    } else {
-                                        prefs.edit().putString("oauth." + provider.id, authState.jsonSerializeString()).apply();
-                                        onAuthorize(true);
-                                    }
-                                }
+                                onOAuthorized(
+                                        new String[]{access.accessToken},
+                                        new String[]{access.idToken},
+                                        new AuthState[]{authState});
                             } catch (Throwable ex) {
                                 showError(ex);
                             }
@@ -892,32 +866,7 @@ public class FragmentOAuth extends FragmentBase {
 
                 if (askAccount)
                     identities.add(new Pair<>(username, personal));
-                else if ("mailru".equals(id)) {
-                    URL url = new URL("https://oauth.mail.ru/userinfo?access_token=" + token[0]);
-                    Log.i("GET " + url);
-                    HttpsURLConnection connection = (HttpsURLConnection) url.openConnection();
-                    connection.setRequestMethod("GET");
-                    connection.setReadTimeout(MAILRU_TIMEOUT);
-                    connection.setConnectTimeout(MAILRU_TIMEOUT);
-                    ConnectionHelper.setUserAgent(context, connection);
-                    connection.connect();
-
-                    try {
-                        int status = connection.getResponseCode();
-                        if (status != HttpsURLConnection.HTTP_OK)
-                            throw new FileNotFoundException("Error " + status + ": " + connection.getResponseMessage());
-
-                        String json = Helper.readStream(connection.getInputStream());
-                        Log.i("json=" + json);
-                        JSONObject data = new JSONObject(json);
-                        name = data.getString("name");
-                        username = data.getString("email");
-                        identities.add(new Pair<>(username, name));
-                    } finally {
-                        connection.disconnect();
-                    }
-
-                } else
+                else
                     throw new IllegalArgumentException("Unknown provider=" + id);
 
                 ConnectivityManager cm = Helper.getSystemService(context, ConnectivityManager.class);
@@ -1056,7 +1005,7 @@ public class FragmentOAuth extends FragmentBase {
                                 ident.host = provider.smtp.host;
                                 ident.encryption = iencryption;
                                 ident.port = provider.smtp.port;
-                                ident.auth_type = (state.length == 1 ? AUTH_TYPE_OAUTH : AUTH_TYPE_GRAPH);
+                                ident.auth_type = AUTH_TYPE_OAUTH;
                                 ident.provider = provider.id;
                                 ident.user = username;
                                 ident.password = state[state.length - 1];
@@ -1078,7 +1027,7 @@ public class FragmentOAuth extends FragmentBase {
                         db.identity().setIdentityPassword(update.id, username,
                                 state[state.length - 1],
                                 null,
-                                (state.length == 1 ? AUTH_TYPE_OAUTH : AUTH_TYPE_GRAPH),
+                                AUTH_TYPE_OAUTH,
                                 provider.id);
                     }
 
@@ -1148,36 +1097,6 @@ public class FragmentOAuth extends FragmentBase {
             tvError.setText(Log.formatThrowable(ex, false));
 
         grpError.setVisibility(View.VISIBLE);
-
-        if (EntityAccount.isOutlook(id)) {
-            if (ex instanceof AuthenticationFailedException) {
-                if (ex.getMessage() != null &&
-                        ex.getMessage().contains("535 5.7.3 Authentication unsuccessful"))
-                    tvOfficeAuthHint.setText(R.string.title_setup_office_auth_5_7_3);
-                else if (ex.getMessage() != null &&
-                        ex.getMessage().contains("SmtpClientAuthentication is disabled"))
-                    // 535 5.7.139 Authentication unsuccessful, SmtpClientAuthentication is disabled for the Tenant
-                    tvOfficeAuthHint.setText(R.string.title_setup_office_auth_5_7_139);
-                else
-                    tvOfficeAuthHint.setText(R.string.title_setup_office_auth);
-                tvOfficeAuthHint.setVisibility(View.VISIBLE);
-            } else if (ex instanceof MessagingException) {
-                boolean notconnected = false;
-                Throwable e = ex;
-                while (e != null) {
-                    String msg = e.getMessage();
-                    if (msg != null && msg.contains("User is authenticated but not connected")) {
-                        notconnected = true;
-                        break;
-                    }
-                    e = e.getCause();
-                }
-                if (notconnected) {
-                    tvOfficeAuthHint.setText(R.string.title_setup_office_not_connected);
-                    tvOfficeAuthHint.setVisibility(View.VISIBLE);
-                }
-            }
-        }
 
         EmailProvider provider;
         try {

@@ -98,8 +98,6 @@ public class ActivitySetup extends ActivityBase implements FragmentManager.OnBac
     static final int REQUEST_DELETE_ACCOUNT = 14;
     static final int REQUEST_EDIT_IDENITY_COLOR = 15;
     static final int REQUEST_IMPORT_PROVIDERS = 16;
-    static final int REQUEST_GRAPH_CONTACTS = 17;
-    static final int REQUEST_GRAPH_CONTACTS_OAUTH = 18;
     static final int REQUEST_DEBUG_INFO = 7000;
 
     static final int PI_CONNECTION = 1;
@@ -107,8 +105,6 @@ public class ActivitySetup extends ActivityBase implements FragmentManager.OnBac
 
     static final String ACTION_QUICK_GMAIL = BuildConfig.APPLICATION_ID + ".ACTION_QUICK_GMAIL";
     static final String ACTION_QUICK_OAUTH = BuildConfig.APPLICATION_ID + ".ACTION_QUICK_OAUTH";
-    static final String ACTION_QUICK_SETUP = BuildConfig.APPLICATION_ID + ".ACTION_QUICK_SETUP";
-    static final String ACTION_QUICK_POP3 = BuildConfig.APPLICATION_ID + ".ACTION_QUICK_POP3";
     static final String ACTION_VIEW_ACCOUNTS = BuildConfig.APPLICATION_ID + ".ACTION_VIEW_ACCOUNTS";
     static final String ACTION_VIEW_IDENTITIES = BuildConfig.APPLICATION_ID + ".ACTION_VIEW_IDENTITIES";
     static final String ACTION_EDIT_ACCOUNT = BuildConfig.APPLICATION_ID + ".EDIT_ACCOUNT";
@@ -332,8 +328,6 @@ public class ActivitySetup extends ActivityBase implements FragmentManager.OnBac
         IntentFilter iff = new IntentFilter();
         iff.addAction(ACTION_QUICK_GMAIL);
         iff.addAction(ACTION_QUICK_OAUTH);
-        iff.addAction(ACTION_QUICK_SETUP);
-        iff.addAction(ACTION_QUICK_POP3);
         iff.addAction(ACTION_VIEW_ACCOUNTS);
         iff.addAction(ACTION_VIEW_IDENTITIES);
         iff.addAction(ACTION_EDIT_ACCOUNT);
@@ -805,10 +799,6 @@ public class ActivitySetup extends ActivityBase implements FragmentManager.OnBac
                     onGmail(intent);
                 else if (ACTION_QUICK_OAUTH.equals(action))
                     onOAuth(intent);
-                else if (ACTION_QUICK_SETUP.equals(action))
-                    onQuickSetup(intent);
-                else if (ACTION_QUICK_POP3.equals(action))
-                    onQuickPop3(intent);
                 else if (ACTION_VIEW_ACCOUNTS.equals(action))
                     onViewAccounts(intent);
                 else if (ACTION_VIEW_IDENTITIES.equals(action))

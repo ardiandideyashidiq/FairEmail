@@ -836,15 +836,13 @@ public class DebugHelper {
                     if (account.synchronize)
                         try {
                             String info = "pwd";
-                            if (account.auth_type == ServiceAuthenticator.AUTH_TYPE_OAUTH ||
-                                    account.auth_type == ServiceAuthenticator.AUTH_TYPE_GRAPH)
+                            if (account.auth_type == ServiceAuthenticator.AUTH_TYPE_OAUTH)
                                 info = getTokenInfo(account.password, account.auth_type);
                             size += write(os, String.format("%s %s\r\n", account.name, info));
 
                             List<EntityIdentity> identities = db.identity().getSynchronizingIdentities(account.id);
                             for (EntityIdentity identity : identities)
-                                if (identity.auth_type == ServiceAuthenticator.AUTH_TYPE_OAUTH ||
-                                        identity.auth_type == ServiceAuthenticator.AUTH_TYPE_GRAPH)
+                                if (identity.auth_type == ServiceAuthenticator.AUTH_TYPE_OAUTH)
                                     size += write(os, String.format("- %s %s\r\n",
                                             identity.name, getTokenInfo(identity.password, identity.auth_type)));
                         } catch (Throwable ex) {
