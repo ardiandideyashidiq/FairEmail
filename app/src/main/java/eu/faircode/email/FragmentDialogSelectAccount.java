@@ -126,13 +126,11 @@ public class FragmentDialogSelectAccount extends FragmentDialogBase {
         private IListener listener;
 
         public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
-            private View vwColor;
-            private TextView tv;
+            private eu.faircode.email.ui.SelectItemComposeView itemView;
 
-            ViewHolder(View itemView) {
+            ViewHolder(eu.faircode.email.ui.SelectItemComposeView itemView) {
                 super(itemView);
-                vwColor = itemView.findViewById(R.id.vwColor);
-                tv = itemView.findViewById(android.R.id.text1);
+                this.itemView = itemView;
             }
 
             private void wire() {
@@ -144,11 +142,13 @@ public class FragmentDialogSelectAccount extends FragmentDialogBase {
             }
 
             private void bindTo(EntityAccount account) {
-                int vpad = (getItemCount() > 10 ? dp6 : dp12);
-                tv.setPadding(0, vpad, 0, vpad);
-
-                vwColor.setBackgroundColor(account.color == null ? Color.TRANSPARENT : account.color);
-                tv.setText(account.name);
+                int vpadDp = (getItemCount() > 10 ? 6 : 12);
+                itemView.bind(
+                        account.color,
+                        account.name == null ? "" : account.name,
+                        null,
+                        vpadDp
+                );
             }
 
             @Override
@@ -186,7 +186,7 @@ public class FragmentDialogSelectAccount extends FragmentDialogBase {
         @Override
         @NonNull
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new ViewHolder(inflater.inflate(R.layout.item_account_select, parent, false));
+            return new ViewHolder(eu.faircode.email.ui.ComposeContentHelper.createSelectItemView(parent.getContext()));
         }
 
         @Override

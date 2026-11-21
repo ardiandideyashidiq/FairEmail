@@ -138,13 +138,11 @@ public class FragmentDialogSelectUnifiedFolder extends FragmentDialogBase {
         private IListener listener;
 
         public class ViewHolder extends RecyclerView.ViewHolder implements View.OnClickListener {
-            private View vwColor;
-            private TextView tv;
+            private eu.faircode.email.ui.SelectItemComposeView itemView;
 
-            ViewHolder(View itemView) {
+            ViewHolder(eu.faircode.email.ui.SelectItemComposeView itemView) {
                 super(itemView);
-                vwColor = itemView.findViewById(R.id.vwColor);
-                tv = itemView.findViewById(android.R.id.text1);
+                this.itemView = itemView;
             }
 
             private void wire() {
@@ -156,14 +154,16 @@ public class FragmentDialogSelectUnifiedFolder extends FragmentDialogBase {
             }
 
             private void bindTo(TupleFolderEx folder) {
-                int vpad = (getItemCount() > 10 ? dp6 : dp12);
-                tv.setPadding(0, vpad, 0, vpad);
-
-                vwColor.setBackgroundColor(folder.color == null ? Color.TRANSPARENT : folder.color);
-                if (folder.accountName == null)
-                    tv.setText(folder.getDisplayName(context));
-                else
-                    tv.setText(folder.accountName + "/" + folder.getDisplayName(context));
+                int vpadDp = (getItemCount() > 10 ? 6 : 12);
+                String name = (folder.accountName == null
+                        ? folder.getDisplayName(context)
+                        : folder.accountName + "/" + folder.getDisplayName(context));
+                itemView.bind(
+                        folder.color,
+                        name,
+                        null,
+                        vpadDp
+                );
             }
 
             @Override
@@ -201,7 +201,7 @@ public class FragmentDialogSelectUnifiedFolder extends FragmentDialogBase {
         @Override
         @NonNull
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new ViewHolder(inflater.inflate(R.layout.item_account_select, parent, false));
+            return new ViewHolder(eu.faircode.email.ui.ComposeContentHelper.createSelectItemView(parent.getContext()));
         }
 
         @Override

@@ -322,4 +322,14 @@ object ComposeContentHelper {
             )
         }
     }
+
+    @JvmStatic
+    fun createSelectItemView(context: Context): SelectItemComposeView {
+        return SelectItemComposeView(context).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
 }
