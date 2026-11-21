@@ -123,12 +123,30 @@ internal fun <T> observeLiveData(liveData: LiveData<T>, initial: T): T {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainComposeApp() {
+fun MainComposeApp(
+    initialOpenMessageId: Long = -1L,
+    initialResumeDraftId: Long = -1L,
+    initialError: String? = null,
+    onConsumeInitialDeepLink: () -> Unit = {},
+    onExitApp: () -> Unit = {}
+) {
     val context = LocalContext.current
     val db = remember(context) { DB.getInstance(context) }
     val prefs = remember(context) { PreferenceManager.getDefaultSharedPreferences(context) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+
+    var eulaAccepted by remember { mutableStateOf(prefs.getBoolean("eula", false)) }
+    if (!eulaAccepted) {
+        EulaWelcomeScreen(
+            onAgree = {
+                prefs.edit().putBoolean("eula", true).apply()
+                eulaAccepted = true
+            },
+            onDisagree = onExitApp
+        )
+        return
+    }
 
     var currentTab by remember { mutableStateOf(MainTab.Inbox) }
     var selectedFolderId by remember { mutableStateOf<Long?>(null) }
@@ -136,6 +154,31 @@ fun MainComposeApp() {
     var openedMessage by remember { mutableStateOf<TupleMessageEx?>(null) }
     var composeTarget by remember { mutableStateOf<ComposeTarget?>(null) }
     var addAccountMode by remember { mutableStateOf<AddAccountMode?>(null) }
+
+    LaunchedEffect(initialOpenMessageId, initialResumeDraftId, initialError) {
+        if (initialOpenMessageId > 0L) {
+            val loaded = withContext(Dispatchers.IO) {
+                db.message().getMessageEx(initialOpenMessageId)
+            }
+            if (loaded != null) {
+                openedMessage = loaded
+            } else {
+                snackbarHostState.showSnackbar(context.getString(R.string.title_no_message))
+            }
+            onConsumeInitialDeepLink()
+        } else if (initialResumeDraftId > 0L) {
+            val draft = withContext(Dispatchers.IO) {
+                db.message().getMessageEx(initialResumeDraftId)
+            }
+            if (draft != null) {
+                composeTarget = ComposeTarget.Reply(draft)
+            }
+            onConsumeInitialDeepLink()
+        } else if (!initialError.isNullOrBlank()) {
+            snackbarHostState.showSnackbar(initialError)
+            onConsumeInitialDeepLink()
+        }
+    }
 
     var pendingBackupAction by remember { mutableStateOf<BackupAction?>(null) }
     var pendingBackupUri by remember { mutableStateOf<Uri?>(null) }

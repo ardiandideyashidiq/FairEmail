@@ -197,23 +197,15 @@ public class ActivityMain extends ActivityBase implements FragmentManager.OnBack
                     if (message == null) {
                         if (sync_on_launch)
                             ServiceUI.sync(ActivityMain.this, null);
-                        startActivity(new Intent(ActivityMain.this, ActivityView.class)
+                        startActivity(new Intent(ActivityMain.this, ActivityComposeMain.class)
+                                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP)
                                 .putExtra("error", getString(R.string.title_no_message)));
                         return;
                     }
 
-                    String type = args.getString("type");
-
-                    Intent thread = new Intent(ActivityMain.this, ActivityView.class);
-                    thread.setAction("thread:" + message.id);
-                    thread.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    thread.putExtra("account", message.account);
-                    thread.putExtra("folder", message.folder);
-                    thread.putExtra("type", type);
-                    thread.putExtra("thread", message.thread);
-                    thread.putExtra("filter_archive", !EntityFolder.ARCHIVE.equals(type));
-                    thread.putExtra("pinned", true);
-                    thread.putExtra("msgid", message.msgid);
+                    Intent thread = new Intent(ActivityMain.this, ActivityComposeMain.class);
+                    thread.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    thread.putExtra("open_message_id", message.id);
 
                     startActivity(thread);
                 }
@@ -312,10 +304,7 @@ public class ActivityMain extends ActivityBase implements FragmentManager.OnBack
                             String last_activity = prefs.getString("last_activity", null);
                             long composing = prefs.getLong("last_composing", -1L);
                             if (ActivityCompose.class.getName().equals(last_activity) && composing >= 0)
-                                view = new Intent(ActivityMain.this, ActivityCompose.class)
-                                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK)
-                                        .putExtra("action", "edit")
-                                        .putExtra("id", composing);
+                                view.putExtra("resume_draft_id", composing);
                         } else
                             view.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
 
@@ -464,20 +453,10 @@ public class ActivityMain extends ActivityBase implements FragmentManager.OnBack
 
             editor.apply();
 
-            if (Helper.isNight(this))
-                setTheme(R.style.AppThemeBlueOrangeDark);
-            else
-                setTheme(R.style.AppThemeBlueOrangeLight);
-
             super.onCreate(savedInstanceState);
-            setContentView(R.layout.activity_main);
-
-            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-            getSupportFragmentManager().addOnBackStackChangedListener(this);
-
-            FragmentTransaction fragmentTransaction = getSupportFragmentManager().beginTransaction();
-            fragmentTransaction.replace(R.id.content_frame, new FragmentEula()).addToBackStack("eula");
-            fragmentTransaction.commit();
+            startActivity(new Intent(ActivityMain.this, ActivityComposeMain.class)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
+            finish();
         }
     }
 
