@@ -226,6 +226,12 @@
         </activity>
 
         <activity
+            android:name=".ActivityComposeMain"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:resizeableActivity="true" />
+
+        <activity
             android:name=".ActivitySetup"
             android:exported="false"
             android:launchMode="singleTask"

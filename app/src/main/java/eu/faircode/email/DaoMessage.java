@@ -576,6 +576,50 @@ public interface DaoMessage {
     @Query(FETCH_MESSAGE)
     TupleMessageEx getMessageEx(long id);
 
+    @Query("SELECT message.*" +
+            ", account.pop AS accountProtocol, account.name AS accountName, account.category AS accountCategory, COALESCE(identity.color, folder.color, account.color) AS accountColor" +
+            ", account.notify AS accountNotify, account.summary AS accountSummary, account.leave_on_server AS accountLeaveOnServer, account.leave_deleted AS accountLeaveDeleted, account.auto_seen AS accountAutoSeen" +
+            ", folder.name AS folderName, folder.color AS folderColor, folder.display AS folderDisplay, folder.type AS folderType, NULL AS folderInheritedType, folder.unified AS folderUnified, folder.read_only AS folderReadOnly" +
+            ", IFNULL(identity.display, identity.name) AS identityName, identity.email AS identityEmail, identity.color AS identityColor, identity.synchronize AS identitySynchronize" +
+            ", message.`from` AS senders" +
+            ", message.`to` AS recipients" +
+            ", 1 AS count" +
+            ", CASE WHEN message.ui_seen THEN 0 ELSE 1 END AS unseen" +
+            ", CASE WHEN message.ui_flagged THEN 0 ELSE 1 END AS unflagged" +
+            ", (folder.type = '" + EntityFolder.DRAFTS + "') AS drafts" +
+            ", 1 AS visible" +
+            ", NOT message.ui_seen AS visible_unseen" +
+            ", message.attachments AS totalAttachments" +
+            ", message.total AS totalSize" +
+            ", message.priority AS ui_priority" +
+            ", message.importance AS ui_importance" +
+            " FROM message" +
+            " JOIN account_view AS account ON account.id = message.account" +
+            " LEFT JOIN identity_view AS identity ON identity.id = message.identity" +
+            " JOIN folder_view AS folder ON folder.id = message.folder" +
+            " WHERE NOT message.ui_hide" +
+            " AND (:folderId IS NULL AND folder.unified OR message.folder = :folderId)" +
+            " AND (NOT :unseenOnly OR NOT message.ui_seen)" +
+            " AND (NOT :flaggedOnly OR message.ui_flagged)" +
+            " AND (NOT :attachmentsOnly OR message.attachments > 0)" +
+            " AND (:query IS NULL OR :query = '' OR message.subject LIKE '%' || :query || '%' OR message.preview LIKE '%' || :query || '%' OR message.`from` LIKE '%' || :query || '%')" +
+            " ORDER BY message.received DESC" +
+            " LIMIT :limit")
+    LiveData<List<TupleMessageEx>> liveComposeMessages(
+            Long folderId,
+            boolean unseenOnly,
+            boolean flaggedOnly,
+            boolean attachmentsOnly,
+            String query,
+            int limit);
+
+    @Query("SELECT * FROM message" +
+            " WHERE NOT ui_hide AND content = 1" +
+            " AND (:folderId IS NULL OR folder = :folderId)" +
+            " ORDER BY received DESC" +
+            " LIMIT :limit")
+    List<EntityMessage> getMessagesForExport(Long folderId, int limit);
+
     String FETCH_KEYWORDS = "SELECT message.keywords AS selected, folder.keywords AS available" +
             " FROM message" +
             " JOIN folder ON folder.id = message.folder" +

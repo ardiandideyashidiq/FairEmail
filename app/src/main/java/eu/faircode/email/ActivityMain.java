@@ -302,7 +302,7 @@ public class ActivityMain extends ActivityBase implements FragmentManager.OnBack
                     }
 
                     if (hasAccounts) {
-                        Intent view = new Intent(ActivityMain.this, ActivityView.class)
+                        Intent view = new Intent(ActivityMain.this, ActivityComposeMain.class)
                                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
                         // VX-N3
@@ -340,7 +340,7 @@ public class ActivityMain extends ActivityBase implements FragmentManager.OnBack
                             }
                         }, SERVICE_START_DELAY);
                     } else {
-                        Intent setup = new Intent(ActivityMain.this, ActivitySetup.class)
+                        Intent setup = new Intent(ActivityMain.this, ActivityComposeMain.class)
                                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                         startActivity(setup, options);
                     }
