@@ -111,7 +111,7 @@ private enum class BackupAction {
 }
 
 @Composable
-private fun <T> observeLiveData(liveData: LiveData<T>, initial: T): T {
+internal fun <T> observeLiveData(liveData: LiveData<T>, initial: T): T {
     var state by remember(liveData) { mutableStateOf(liveData.value ?: initial) }
     DisposableEffect(liveData) {
         val observer = Observer<T> { value -> state = value }
@@ -134,6 +134,7 @@ fun MainComposeApp() {
     var selectedFolderId by remember { mutableStateOf<Long?>(null) }
     var selectedFolderTitle by remember { mutableStateOf<String?>(null) }
     var openedMessage by remember { mutableStateOf<TupleMessageEx?>(null) }
+    var composeTarget by remember { mutableStateOf<ComposeTarget?>(null) }
     var addAccountMode by remember { mutableStateOf<AddAccountMode?>(null) }
 
     var pendingBackupAction by remember { mutableStateOf<BackupAction?>(null) }
@@ -181,7 +182,7 @@ fun MainComposeApp() {
     }
 
     AnimatedContent(
-        targetState = openedMessage,
+        targetState = Pair(composeTarget, openedMessage),
         transitionSpec = {
             (fadeIn(ExpressiveMotion.effectsDefault()) + scaleIn(
                 initialScale = 0.96f,
@@ -192,25 +193,23 @@ fun MainComposeApp() {
             ))
         },
         label = "MessageDetailTransition"
-    ) { msg ->
-        if (msg != null) {
+    ) { (activeCompose, msg) ->
+        if (activeCompose != null) {
+            ComposeEmailScreen(
+                db = db,
+                target = activeCompose,
+                onBack = { composeTarget = null },
+                onCompleted = { feedback ->
+                    composeTarget = null
+                    scope.launch { snackbarHostState.showSnackbar(feedback) }
+                }
+            )
+        } else if (msg != null) {
             MessageDetailScreen(
                 message = msg,
                 onBack = { openedMessage = null },
-                onReply = {
-                    context.startActivity(
-                        Intent(context, ActivityCompose::class.java)
-                            .putExtra("action", "reply")
-                            .putExtra("id", it.id)
-                    )
-                },
-                onForward = {
-                    context.startActivity(
-                        Intent(context, ActivityCompose::class.java)
-                            .putExtra("action", "forward")
-                            .putExtra("id", it.id)
-                    )
-                },
+                onReply = { composeTarget = ComposeTarget.Reply(it) },
+                onForward = { composeTarget = ComposeTarget.Forward(it) },
                 onToggleStar = {
                     scope.launch(Dispatchers.IO) {
                         EntityOperation.queue(context, it, EntityOperation.FLAG, !it.ui_flagged)
@@ -260,12 +259,7 @@ fun MainComposeApp() {
                 floatingActionButton = {
                     if (currentTab == MainTab.Inbox || currentTab == MainTab.Folders) {
                         ExpressiveComposeFab(
-                            onClick = {
-                                context.startActivity(
-                                    Intent(context, ActivityCompose::class.java)
-                                        .putExtra("action", "new")
-                                )
-                            }
+                            onClick = { composeTarget = ComposeTarget.New }
                         )
                     }
                 },
