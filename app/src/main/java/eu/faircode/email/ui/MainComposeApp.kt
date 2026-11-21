@@ -84,6 +84,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -275,56 +276,14 @@ fun MainComposeApp(
         }
     }
 
-    AnimatedContent(
-        targetState = Pair(composeTarget, openedMessage),
-        contentKey = { (compose, msg) ->
-            compose?.let { "compose:${it::class.simpleName}" }
-                ?: msg?.id?.let { "msg:$it" }
-                ?: "main"
-        },
-        transitionSpec = {
-            (fadeIn(ExpressiveMotion.effectsDefault()) + scaleIn(
-                initialScale = 0.96f,
-                animationSpec = ExpressiveMotion.spatialDefault()
-            )) togetherWith (fadeOut(ExpressiveMotion.effectsDefault()) + scaleOut(
-                targetScale = 0.96f,
-                animationSpec = ExpressiveMotion.spatialDefault()
-            ))
-        },
-        label = "MessageDetailTransition"
-    ) { (activeCompose, msg) ->
-        if (activeCompose != null) {
-            ComposeEmailScreen(
-                db = db,
-                target = activeCompose,
-                onBack = { composeTarget = null },
-                onCompleted = { feedback ->
-                    composeTarget = null
-                    scope.launch { snackbarHostState.showSnackbar(feedback) }
-                }
-            )
-        } else if (msg != null) {
-            MessageDetailScreen(
-                message = msg,
-                onBack = { openedMessage = null },
-                onReply = { composeTarget = ComposeTarget.Reply(it) },
-                onForward = { composeTarget = ComposeTarget.Forward(it) },
-                onToggleStar = {
-                    scope.launch(Dispatchers.IO) {
-                        EntityOperation.queue(context, it, EntityOperation.FLAG, !it.ui_flagged)
-                        ServiceSynchronize.eval(context, "flag")
-                    }
-                },
-                onDelete = {
-                    scope.launch(Dispatchers.IO) {
-                        EntityOperation.queue(context, it, EntityOperation.DELETE)
-                        ServiceSynchronize.eval(context, "delete")
-                    }
-                    openedMessage = null
-                }
-            )
-        } else {
-            Scaffold(
+    val saveableStateHolder = rememberSaveableStateHolder()
+    var lastOpenedMessage by remember { mutableStateOf<TupleMessageEx?>(null) }
+    if (openedMessage != null) lastOpenedMessage = openedMessage
+    var lastComposeTarget by remember { mutableStateOf<ComposeTarget?>(null) }
+    if (composeTarget != null) lastComposeTarget = composeTarget
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
                 snackbarHost = { SnackbarHost(snackbarHostState) },
                 topBar = {
                     TopAppBar(
@@ -415,6 +374,7 @@ fun MainComposeApp(
                         .padding(innerPadding),
                     label = "TabTransition"
                 ) { tab ->
+                    saveableStateHolder.SaveableStateProvider(tab.name) {
                     when (tab) {
                         MainTab.Inbox -> InboxScreen(
                             db = db,
@@ -474,7 +434,67 @@ fun MainComposeApp(
                             onImportMail = { importMailLauncher.launch(arrayOf("*/*")) }
                         )
                     }
+                    }
                 }
+            }
+
+        androidx.compose.animation.AnimatedVisibility(
+            visible = openedMessage != null,
+            enter = slideInVertically(
+                initialOffsetY = { it / 12 },
+                animationSpec = ExpressiveMotion.spatialFast()
+            ) + fadeIn(ExpressiveMotion.effectsDefault()),
+            exit = slideOutVertically(
+                targetOffsetY = { it / 12 },
+                animationSpec = ExpressiveMotion.spatialFast()
+            ) + fadeOut(ExpressiveMotion.effectsDefault())
+        ) {
+            val msg = openedMessage ?: lastOpenedMessage
+            if (msg != null) {
+                MessageDetailScreen(
+                    message = msg,
+                    onBack = { openedMessage = null },
+                    onReply = { composeTarget = ComposeTarget.Reply(it) },
+                    onForward = { composeTarget = ComposeTarget.Forward(it) },
+                    onToggleStar = {
+                        scope.launch(Dispatchers.IO) {
+                            EntityOperation.queue(context, it, EntityOperation.FLAG, !it.ui_flagged)
+                            ServiceSynchronize.eval(context, "flag")
+                        }
+                    },
+                    onDelete = {
+                        scope.launch(Dispatchers.IO) {
+                            EntityOperation.queue(context, it, EntityOperation.DELETE)
+                            ServiceSynchronize.eval(context, "delete")
+                        }
+                        openedMessage = null
+                    }
+                )
+            }
+        }
+
+        androidx.compose.animation.AnimatedVisibility(
+            visible = composeTarget != null,
+            enter = slideInVertically(
+                initialOffsetY = { it / 10 },
+                animationSpec = ExpressiveMotion.spatialFast()
+            ) + fadeIn(ExpressiveMotion.effectsDefault()),
+            exit = slideOutVertically(
+                targetOffsetY = { it / 10 },
+                animationSpec = ExpressiveMotion.spatialFast()
+            ) + fadeOut(ExpressiveMotion.effectsDefault())
+        ) {
+            val activeCompose = composeTarget ?: lastComposeTarget
+            if (activeCompose != null) {
+                ComposeEmailScreen(
+                    db = db,
+                    target = activeCompose,
+                    onBack = { composeTarget = null },
+                    onCompleted = { feedback ->
+                        composeTarget = null
+                        scope.launch { snackbarHostState.showSnackbar(feedback) }
+                    }
+                )
             }
         }
     }
@@ -1599,12 +1619,16 @@ private fun MessageDetailScreen(
                 AndroidView(
                     factory = { ctx ->
                         WebView(ctx).apply {
+                            setBackgroundColor(android.graphics.Color.TRANSPARENT)
                             settings.javaScriptEnabled = false
                             settings.loadsImagesAutomatically = false
                         }
                     },
                     update = { webView ->
-                        webView.loadDataWithBaseURL(null, body, "text/html", "UTF-8", null)
+                        if (webView.tag != body) {
+                            webView.tag = body
+                            webView.loadDataWithBaseURL(null, body, "text/html", "UTF-8", null)
+                        }
                     },
                     modifier = Modifier.fillMaxSize()
                 )
