@@ -7,40 +7,56 @@ import android.text.format.DateUtils
 import android.webkit.WebView
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -55,6 +71,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -68,6 +87,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.Observer
 import androidx.preference.PreferenceManager
 import eu.faircode.email.ui.SingleInputDialogContent
+import eu.faircode.email.ui.theme.ExpressiveMotion
 import eu.faircode.email.ui.theme.FairEmailTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -113,7 +133,6 @@ fun MainComposeApp() {
     var selectedFolderTitle by remember { mutableStateOf<String?>(null) }
     var openedMessage by remember { mutableStateOf<TupleMessageEx?>(null) }
 
-    // Encrypted backup workflow state
     var pendingBackupAction by remember { mutableStateOf<BackupAction?>(null) }
     var pendingBackupUri by remember { mutableStateOf<Uri?>(null) }
     var passwordInput by remember { mutableStateOf("") }
@@ -158,182 +177,187 @@ fun MainComposeApp() {
         }
     }
 
-    if (openedMessage != null) {
-        MessageDetailScreen(
-            message = openedMessage!!,
-            onBack = { openedMessage = null },
-            onReply = { msg ->
-                context.startActivity(
-                    Intent(context, ActivityCompose::class.java)
-                        .putExtra("action", "reply")
-                        .putExtra("id", msg.id)
-                )
-            },
-            onForward = { msg ->
-                context.startActivity(
-                    Intent(context, ActivityCompose::class.java)
-                        .putExtra("action", "forward")
-                        .putExtra("id", msg.id)
-                )
-            },
-            onToggleStar = { msg ->
-                scope.launch(Dispatchers.IO) {
-                    EntityOperation.queue(context, msg, EntityOperation.FLAG, !msg.ui_flagged)
-                    ServiceSynchronize.eval(context, "flag")
-                }
-            },
-            onDelete = { msg ->
-                scope.launch(Dispatchers.IO) {
-                    EntityOperation.queue(context, msg, EntityOperation.DELETE)
-                    ServiceSynchronize.eval(context, "delete")
-                }
-                openedMessage = null
-            }
-        )
-        return
-    }
-
-    Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = {
-                    Text(
-                        text = if (currentTab == MainTab.Inbox && selectedFolderTitle != null)
-                            selectedFolderTitle!! else currentTab.label
+    AnimatedContent(
+        targetState = openedMessage,
+        transitionSpec = {
+            (fadeIn(ExpressiveMotion.effectsDefault()) + scaleIn(
+                initialScale = 0.96f,
+                animationSpec = ExpressiveMotion.spatialDefault()
+            )) togetherWith (fadeOut(ExpressiveMotion.effectsDefault()) + scaleOut(
+                targetScale = 0.96f,
+                animationSpec = ExpressiveMotion.spatialDefault()
+            ))
+        },
+        label = "MessageDetailTransition"
+    ) { msg ->
+        if (msg != null) {
+            MessageDetailScreen(
+                message = msg,
+                onBack = { openedMessage = null },
+                onReply = {
+                    context.startActivity(
+                        Intent(context, ActivityCompose::class.java)
+                            .putExtra("action", "reply")
+                            .putExtra("id", it.id)
                     )
                 },
-                actions = {
-                    if (currentTab == MainTab.Inbox && selectedFolderId != null) {
-                        TextButton(onClick = {
-                            selectedFolderId = null
-                            selectedFolderTitle = null
-                        }) {
-                            Text("All Inbox")
-                        }
+                onForward = {
+                    context.startActivity(
+                        Intent(context, ActivityCompose::class.java)
+                            .putExtra("action", "forward")
+                            .putExtra("id", it.id)
+                    )
+                },
+                onToggleStar = {
+                    scope.launch(Dispatchers.IO) {
+                        EntityOperation.queue(context, it, EntityOperation.FLAG, !it.ui_flagged)
+                        ServiceSynchronize.eval(context, "flag")
                     }
-                    if (currentTab == MainTab.Inbox || currentTab == MainTab.Folders) {
-                        IconButton(onClick = { ServiceUI.sync(context, null) }) {
-                            Icon(
-                                painter = painterResource(R.drawable.twotone_sync_24),
-                                contentDescription = "Sync"
-                            )
-                        }
+                },
+                onDelete = {
+                    scope.launch(Dispatchers.IO) {
+                        EntityOperation.queue(context, it, EntityOperation.DELETE)
+                        ServiceSynchronize.eval(context, "delete")
                     }
+                    openedMessage = null
                 }
             )
-        },
-        floatingActionButton = {
-            if (currentTab == MainTab.Inbox || currentTab == MainTab.Folders) {
-                FloatingActionButton(
-                    onClick = {
-                        context.startActivity(
-                            Intent(context, ActivityCompose::class.java)
-                                .putExtra("action", "new")
-                        )
-                    }
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.twotone_edit_24),
-                        contentDescription = stringResource(R.string.title_compose)
-                    )
-                }
-            }
-        },
-        bottomBar = {
-            NavigationBar {
-                MainTab.entries.forEach { tab ->
-                    NavigationBarItem(
-                        selected = currentTab == tab,
-                        onClick = { currentTab = tab },
-                        icon = {
-                            Icon(
-                                painter = painterResource(tab.iconRes),
-                                contentDescription = tab.label
+        } else {
+            Scaffold(
+                snackbarHost = { SnackbarHost(snackbarHostState) },
+                topBar = {
+                    TopAppBar(
+                        title = {
+                            Text(
+                                text = if (currentTab == MainTab.Inbox && selectedFolderTitle != null)
+                                    selectedFolderTitle!! else currentTab.label,
+                                style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold)
                             )
                         },
-                        label = { Text(tab.label, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                    )
-                }
-            }
-        }
-    ) { innerPadding ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            when (currentTab) {
-                MainTab.Inbox -> InboxScreen(
-                    db = db,
-                    folderId = selectedFolderId,
-                    onMessageClick = { msg ->
-                        openedMessage = msg
-                        if (!msg.ui_seen) {
-                            scope.launch(Dispatchers.IO) {
-                                EntityOperation.queue(context, msg, EntityOperation.SEEN, true)
-                                ServiceSynchronize.eval(context, "seen")
+                        actions = {
+                            if (currentTab == MainTab.Inbox && selectedFolderId != null) {
+                                TextButton(onClick = {
+                                    selectedFolderId = null
+                                    selectedFolderTitle = null
+                                }) {
+                                    Text("All Inbox")
+                                }
+                            }
+                            if (currentTab == MainTab.Inbox || currentTab == MainTab.Folders) {
+                                IconButton(onClick = { ServiceUI.sync(context, null) }) {
+                                    Icon(
+                                        painter = painterResource(R.drawable.twotone_sync_24),
+                                        contentDescription = "Sync"
+                                    )
+                                }
                             }
                         }
-                    },
-                    onToggleStar = { msg ->
-                        scope.launch(Dispatchers.IO) {
-                            EntityOperation.queue(context, msg, EntityOperation.FLAG, !msg.ui_flagged)
-                            ServiceSynchronize.eval(context, "flag")
-                        }
-                    }
-                )
-
-                MainTab.Folders -> FoldersScreen(
-                    db = db,
-                    onFolderClick = { folder ->
-                        selectedFolderId = folder.id
-                        selectedFolderTitle = folder.getDisplayName(context)
-                        currentTab = MainTab.Inbox
-                    }
-                )
-
-                MainTab.Search -> SearchScreen(
-                    db = db,
-                    onMessageClick = { msg -> openedMessage = msg },
-                    onToggleStar = { msg ->
-                        scope.launch(Dispatchers.IO) {
-                            EntityOperation.queue(context, msg, EntityOperation.FLAG, !msg.ui_flagged)
-                            ServiceSynchronize.eval(context, "flag")
-                        }
-                    }
-                )
-
-                MainTab.Accounts -> AccountsScreen(
-                    db = db,
-                    onAddGmailOAuth = {
-                        context.startActivity(
-                            Intent(context, ActivitySetup::class.java)
-                                .putExtra("target", "oauth")
-                                .putExtra("id", "gmail")
-                                .putExtra("name", "Gmail")
-                                .putExtra("askAccount", true)
+                    )
+                },
+                floatingActionButton = {
+                    if (currentTab == MainTab.Inbox || currentTab == MainTab.Folders) {
+                        ExpressiveComposeFab(
+                            onClick = {
+                                context.startActivity(
+                                    Intent(context, ActivityCompose::class.java)
+                                        .putExtra("action", "new")
+                                )
+                            }
                         )
+                    }
+                },
+                bottomBar = {
+                    FloatingExpressiveNavBar(
+                        currentTab = currentTab,
+                        onSelectTab = { currentTab = it }
+                    )
+                }
+            ) { innerPadding ->
+                AnimatedContent(
+                    targetState = currentTab,
+                    transitionSpec = {
+                        fadeIn(ExpressiveMotion.effectsDefault()) +
+                            scaleIn(initialScale = 0.98f, animationSpec = ExpressiveMotion.spatialFast()) togetherWith
+                            fadeOut(ExpressiveMotion.effectsDefault())
                     },
-                    onAddGmailAndroid = {
-                        context.startActivity(
-                            Intent(context, ActivitySetup::class.java)
-                                .putExtra("target", "gmail")
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    label = "TabTransition"
+                ) { tab ->
+                    when (tab) {
+                        MainTab.Inbox -> InboxScreen(
+                            db = db,
+                            folderId = selectedFolderId,
+                            onMessageClick = { item ->
+                                openedMessage = item
+                                if (!item.ui_seen) {
+                                    scope.launch(Dispatchers.IO) {
+                                        EntityOperation.queue(context, item, EntityOperation.SEEN, true)
+                                        ServiceSynchronize.eval(context, "seen")
+                                    }
+                                }
+                            },
+                            onToggleStar = { item ->
+                                scope.launch(Dispatchers.IO) {
+                                    EntityOperation.queue(context, item, EntityOperation.FLAG, !item.ui_flagged)
+                                    ServiceSynchronize.eval(context, "flag")
+                                }
+                            }
                         )
-                    },
-                    onExportAccounts = { exportAccountsLauncher.launch("fairemail-accounts.enc") },
-                    onImportAccounts = { importAccountsLauncher.launch(arrayOf("*/*")) },
-                    onExportMail = { exportMailLauncher.launch("fairemail-mail.enc") },
-                    onImportMail = { importMailLauncher.launch(arrayOf("*/*")) }
-                )
 
-                MainTab.Settings -> SettingsScreen(
-                    prefs = prefs,
-                    onExportAccounts = { exportAccountsLauncher.launch("fairemail-accounts.enc") },
-                    onImportAccounts = { importAccountsLauncher.launch(arrayOf("*/*")) },
-                    onExportMail = { exportMailLauncher.launch("fairemail-mail.enc") },
-                    onImportMail = { importMailLauncher.launch(arrayOf("*/*")) }
-                )
+                        MainTab.Folders -> FoldersScreen(
+                            db = db,
+                            onFolderClick = { folder ->
+                                selectedFolderId = folder.id
+                                selectedFolderTitle = folder.getDisplayName(context)
+                                currentTab = MainTab.Inbox
+                            }
+                        )
+
+                        MainTab.Search -> SearchScreen(
+                            db = db,
+                            onMessageClick = { item -> openedMessage = item },
+                            onToggleStar = { item ->
+                                scope.launch(Dispatchers.IO) {
+                                    EntityOperation.queue(context, item, EntityOperation.FLAG, !item.ui_flagged)
+                                    ServiceSynchronize.eval(context, "flag")
+                                }
+                            }
+                        )
+
+                        MainTab.Accounts -> AccountsScreen(
+                            db = db,
+                            onAddGmailOAuth = {
+                                context.startActivity(
+                                    Intent(context, ActivitySetup::class.java)
+                                        .putExtra("target", "oauth")
+                                        .putExtra("id", "gmail")
+                                        .putExtra("name", "Gmail")
+                                        .putExtra("askAccount", true)
+                                )
+                            },
+                            onAddGmailAndroid = {
+                                context.startActivity(
+                                    Intent(context, ActivitySetup::class.java)
+                                        .putExtra("target", "gmail")
+                                )
+                            },
+                            onExportAccounts = { exportAccountsLauncher.launch("fairemail-accounts.enc") },
+                            onImportAccounts = { importAccountsLauncher.launch(arrayOf("*/*")) },
+                            onExportMail = { exportMailLauncher.launch("fairemail-mail.enc") },
+                            onImportMail = { importMailLauncher.launch(arrayOf("*/*")) }
+                        )
+
+                        MainTab.Settings -> SettingsScreen(
+                            prefs = prefs,
+                            onExportAccounts = { exportAccountsLauncher.launch("fairemail-accounts.enc") },
+                            onImportAccounts = { importAccountsLauncher.launch(arrayOf("*/*")) },
+                            onExportMail = { exportMailLauncher.launch("fairemail-mail.enc") },
+                            onImportMail = { importMailLauncher.launch(arrayOf("*/*")) }
+                        )
+                    }
+                }
             }
         }
     }
@@ -341,10 +365,6 @@ fun MainComposeApp() {
     if (pendingBackupAction != null && pendingBackupUri != null) {
         val action = pendingBackupAction!!
         val uri = pendingBackupUri!!
-        val titleRes = when (action) {
-            BackupAction.EXPORT_ACCOUNTS, BackupAction.EXPORT_MAIL -> R.string.title_setup_password
-            BackupAction.IMPORT_ACCOUNTS, BackupAction.IMPORT_MAIL -> R.string.title_setup_password
-        }
 
         AlertDialog(
             onDismissRequest = {
@@ -354,7 +374,7 @@ fun MainComposeApp() {
             text = {
                 SingleInputDialogContent(
                     titleIconRes = R.drawable.twotone_vpn_key_24,
-                    titleRes = titleRes,
+                    titleRes = R.string.title_setup_password,
                     value = passwordInput,
                     onValueChange = { passwordInput = it },
                     hint = "Encryption password",
@@ -414,6 +434,153 @@ fun MainComposeApp() {
 }
 
 @Composable
+private fun FloatingExpressiveNavBar(
+    currentTab: MainTab,
+    onSelectTab: (MainTab) -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 6.dp,
+            shadowElevation = 8.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MainTab.entries.forEach { tab ->
+                    val selected = currentTab == tab
+                    val containerColor by animateColorAsState(
+                        targetValue = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
+                        animationSpec = ExpressiveMotion.effectsDefault(),
+                        label = "NavPillColor"
+                    )
+                    val contentColor by animateColorAsState(
+                        targetValue = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                        animationSpec = ExpressiveMotion.effectsDefault(),
+                        label = "NavTextColor"
+                    )
+                    val scale by animateFloatAsState(
+                        targetValue = if (selected) 1.04f else 1f,
+                        animationSpec = ExpressiveMotion.spatialFast(),
+                        label = "NavScale"
+                    )
+
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .scale(scale)
+                            .clip(CircleShape)
+                            .background(containerColor)
+                            .clickable { onSelectTab(tab) }
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            painter = painterResource(tab.iconRes),
+                            contentDescription = tab.label,
+                            tint = contentColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = tab.label,
+                            color = contentColor,
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExpressiveComposeFab(onClick: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val cornerRadius by animateDpAsState(
+        targetValue = if (pressed) 14.dp else 22.dp,
+        animationSpec = ExpressiveMotion.spatialFast(),
+        label = "FabCornerMorph"
+    )
+    val scale by animateFloatAsState(
+        targetValue = if (pressed) 0.94f else 1f,
+        animationSpec = ExpressiveMotion.spatialFast(),
+        label = "FabScale"
+    )
+
+    FloatingActionButton(
+        onClick = onClick,
+        interactionSource = interactionSource,
+        shape = RoundedCornerShape(cornerRadius),
+        containerColor = MaterialTheme.colorScheme.primaryContainer,
+        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+        modifier = Modifier.scale(scale)
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.twotone_edit_24),
+            contentDescription = stringResource(R.string.title_compose)
+        )
+    }
+}
+
+@Composable
+private fun ExpressiveFilterChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val corner by animateDpAsState(
+        targetValue = if (selected) 20.dp else 10.dp,
+        animationSpec = ExpressiveMotion.spatialFast(),
+        label = "ChipCorner"
+    )
+    val bgColor by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+        animationSpec = ExpressiveMotion.effectsDefault(),
+        label = "ChipColor"
+    )
+    val textColor by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = ExpressiveMotion.effectsDefault(),
+        label = "ChipTextColor"
+    )
+
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(corner),
+        color = bgColor,
+        tonalElevation = if (selected) 2.dp else 0.dp
+    ) {
+        Text(
+            text = label,
+            color = textColor,
+            style = MaterialTheme.typography.labelLarge.copy(
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+            ),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+    }
+}
+
+@Composable
 private fun InboxScreen(
     db: DB,
     folderId: Long?,
@@ -436,32 +603,32 @@ private fun InboxScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            FilterChip(
+            ExpressiveFilterChip(
+                label = "All",
                 selected = !unseenOnly && !flaggedOnly && !attachmentsOnly,
                 onClick = {
                     unseenOnly = false
                     flaggedOnly = false
                     attachmentsOnly = false
-                },
-                label = { Text("All") }
+                }
             )
-            FilterChip(
+            ExpressiveFilterChip(
+                label = "Unread",
                 selected = unseenOnly,
-                onClick = { unseenOnly = !unseenOnly },
-                label = { Text("Unread") }
+                onClick = { unseenOnly = !unseenOnly }
             )
-            FilterChip(
+            ExpressiveFilterChip(
+                label = "Starred",
                 selected = flaggedOnly,
-                onClick = { flaggedOnly = !flaggedOnly },
-                label = { Text("Starred") }
+                onClick = { flaggedOnly = !flaggedOnly }
             )
-            FilterChip(
+            ExpressiveFilterChip(
+                label = "Attachments",
                 selected = attachmentsOnly,
-                onClick = { attachmentsOnly = !attachmentsOnly },
-                label = { Text("Attachments") }
+                onClick = { attachmentsOnly = !attachmentsOnly }
             )
         }
 
@@ -473,14 +640,17 @@ private fun InboxScreen(
                 )
             }
         } else {
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 items(messages, key = { it.id ?: 0L }) { msg ->
                     MessageRowItem(
                         message = msg,
                         onClick = { onMessageClick(msg) },
                         onToggleStar = { onToggleStar(msg) }
                     )
-                    HorizontalDivider()
                 }
             }
         }
@@ -501,56 +671,93 @@ private fun MessageRowItem(
         DateUtils.getRelativeTimeSpanString(context, message.received).toString()
     }
     val fontWeight = if (message.ui_seen) FontWeight.Normal else FontWeight.Bold
+    val cardShape by animateDpAsState(
+        targetValue = if (message.ui_seen) 14.dp else 22.dp,
+        animationSpec = ExpressiveMotion.spatialFast(),
+        label = "MsgShape"
+    )
+    val cardContainer by animateColorAsState(
+        targetValue = if (message.ui_seen)
+            MaterialTheme.colorScheme.surfaceContainerLow
+        else
+            MaterialTheme.colorScheme.surfaceContainerHigh,
+        animationSpec = ExpressiveMotion.effectsDefault(),
+        label = "MsgContainer"
+    )
+    val starScale by animateFloatAsState(
+        targetValue = if (message.ui_flagged) 1.15f else 1f,
+        animationSpec = ExpressiveMotion.spatialFast(),
+        label = "StarScale"
+    )
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+    Card(
+        onClick = onClick,
+        shape = RoundedCornerShape(cardShape),
+        colors = CardDefaults.cardColors(containerColor = cardContainer),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = sender,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = fontWeight),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (!message.ui_seen) {
+                Box(
+                    modifier = Modifier
+                        .size(8.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = time,
-                    style = MaterialTheme.typography.labelSmall
-                )
+                Spacer(modifier = Modifier.width(10.dp))
             }
-            Text(
-                text = message.subject ?: "(No subject)",
-                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = fontWeight),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            if (!message.preview.isNullOrEmpty()) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = sender,
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = fontWeight),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = time,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 Text(
-                    text = message.preview ?: "",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    text = message.subject ?: "(No subject)",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = fontWeight),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                if (!message.preview.isNullOrEmpty()) {
+                    Text(
+                        text = message.preview ?: "",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
-        }
-        IconButton(onClick = onToggleStar) {
-            Icon(
-                painter = painterResource(
-                    if (message.ui_flagged) R.drawable.twotone_star_24 else R.drawable.twotone_star_border_24
-                ),
-                contentDescription = "Star",
-                tint = if (message.ui_flagged) FairEmailTheme.colors.accent else MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            IconButton(
+                onClick = onToggleStar,
+                modifier = Modifier.scale(starScale)
+            ) {
+                Icon(
+                    painter = painterResource(
+                        if (message.ui_flagged) R.drawable.twotone_star_24 else R.drawable.twotone_star_border_24
+                    ),
+                    contentDescription = "Star",
+                    tint = if (message.ui_flagged) FairEmailTheme.colors.accent else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -571,40 +778,51 @@ private fun FoldersScreen(
             Text(text = "No folders", style = MaterialTheme.typography.bodyMedium)
         }
     } else {
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             items(folders, key = { it.id ?: 0L }) { folder ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { onFolderClick(folder) }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Card(
+                    onClick = { onFolderClick(folder) },
+                    shape = RoundedCornerShape(18.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        painter = painterResource(EntityFolder.getIcon(folder.type)),
-                        contentDescription = null
-                    )
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = folder.getDisplayName(context),
-                            style = MaterialTheme.typography.bodyLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            painter = painterResource(EntityFolder.getIcon(folder.type)),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
                         )
-                        if (!folder.accountName.isNullOrEmpty()) {
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = folder.accountName ?: "",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                text = folder.getDisplayName(context),
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
+                            val accName = folder.accountName
+                            if (!accName.isNullOrEmpty()) {
+                                Text(
+                                    text = accName,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        if (folder.unseen > 0) {
+                            Badge { Text(folder.unseen.toString()) }
                         }
                     }
-                    if (folder.unseen > 0) {
-                        Badge { Text(folder.unseen.toString()) }
-                    }
                 }
-                HorizontalDivider()
             }
         }
     }
@@ -633,6 +851,7 @@ private fun SearchScreen(
             value = query,
             onValueChange = { query = it },
             singleLine = true,
+            shape = CircleShape,
             placeholder = { Text("Search Gmail messages...") },
             leadingIcon = {
                 Icon(painter = painterResource(R.drawable.twotone_search_24), contentDescription = null)
@@ -648,18 +867,21 @@ private fun SearchScreen(
                 .padding(horizontal = 16.dp, vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            FilterChip(selected = unseenOnly, onClick = { unseenOnly = !unseenOnly }, label = { Text("Unread") })
-            FilterChip(selected = flaggedOnly, onClick = { flaggedOnly = !flaggedOnly }, label = { Text("Starred") })
-            FilterChip(selected = attachmentsOnly, onClick = { attachmentsOnly = !attachmentsOnly }, label = { Text("Attachments") })
+            ExpressiveFilterChip(label = "Unread", selected = unseenOnly, onClick = { unseenOnly = !unseenOnly })
+            ExpressiveFilterChip(label = "Starred", selected = flaggedOnly, onClick = { flaggedOnly = !flaggedOnly })
+            ExpressiveFilterChip(label = "Attachments", selected = attachmentsOnly, onClick = { attachmentsOnly = !attachmentsOnly })
         }
-        LazyColumn(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             items(messages, key = { it.id ?: 0L }) { msg ->
                 MessageRowItem(
                     message = msg,
                     onClick = { onMessageClick(msg) },
                     onToggleStar = { onToggleStar(msg) }
                 )
-                HorizontalDivider()
             }
         }
     }
@@ -696,15 +918,20 @@ private fun AccountsScreen(
             )
         } else {
             accounts.forEach { account ->
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(12.dp)) {
+                Card(
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
                         Text(
                             text = account.name ?: account.user ?: "Gmail",
-                            style = MaterialTheme.typography.titleSmall
+                            style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold)
                         )
-                        if (!account.user.isNullOrEmpty()) {
+                        val user = account.user
+                        if (!user.isNullOrEmpty()) {
                             Text(
-                                text = account.user ?: "",
+                                text = user,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -718,10 +945,18 @@ private fun AccountsScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Button(onClick = onAddGmailOAuth, modifier = Modifier.weight(1f)) {
+            Button(
+                onClick = onAddGmailOAuth,
+                shape = CircleShape,
+                modifier = Modifier.weight(1f)
+            ) {
                 Text("Add Gmail (OAuth)")
             }
-            OutlinedButton(onClick = onAddGmailAndroid, modifier = Modifier.weight(1f)) {
+            OutlinedButton(
+                onClick = onAddGmailAndroid,
+                shape = CircleShape,
+                modifier = Modifier.weight(1f)
+            ) {
                 Text("Add Gmail (Android)")
             }
         }
@@ -739,10 +974,10 @@ private fun AccountsScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Button(onClick = onExportAccounts, modifier = Modifier.weight(1f)) {
+            Button(onClick = onExportAccounts, shape = CircleShape, modifier = Modifier.weight(1f)) {
                 Text("Export Accounts")
             }
-            OutlinedButton(onClick = onImportAccounts, modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = onImportAccounts, shape = CircleShape, modifier = Modifier.weight(1f)) {
                 Text("Import Accounts")
             }
         }
@@ -751,10 +986,10 @@ private fun AccountsScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Button(onClick = onExportMail, modifier = Modifier.weight(1f)) {
+            Button(onClick = onExportMail, shape = CircleShape, modifier = Modifier.weight(1f)) {
                 Text("Export Mail")
             }
-            OutlinedButton(onClick = onImportMail, modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = onImportMail, shape = CircleShape, modifier = Modifier.weight(1f)) {
                 Text("Import Mail")
             }
         }
@@ -833,10 +1068,10 @@ private fun SettingsScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedButton(onClick = onExportAccounts, modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = onExportAccounts, shape = CircleShape, modifier = Modifier.weight(1f)) {
                 Text("Export Accounts")
             }
-            OutlinedButton(onClick = onImportAccounts, modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = onImportAccounts, shape = CircleShape, modifier = Modifier.weight(1f)) {
                 Text("Import Accounts")
             }
         }
@@ -844,10 +1079,10 @@ private fun SettingsScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            OutlinedButton(onClick = onExportMail, modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = onExportMail, shape = CircleShape, modifier = Modifier.weight(1f)) {
                 Text("Export Mail")
             }
-            OutlinedButton(onClick = onImportMail, modifier = Modifier.weight(1f)) {
+            OutlinedButton(onClick = onImportMail, shape = CircleShape, modifier = Modifier.weight(1f)) {
                 Text("Import Mail")
             }
         }
@@ -863,8 +1098,9 @@ private fun SettingSwitchRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
             .clickable { onCheckedChange(!checked) }
-            .padding(vertical = 8.dp),
+            .padding(vertical = 8.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -914,37 +1150,56 @@ private fun MessageDetailScreen(
                             contentDescription = "Back"
                         )
                     }
-                },
-                actions = {
-                    IconButton(onClick = { onToggleStar(message) }) {
-                        Icon(
-                            painter = painterResource(
-                                if (message.ui_flagged) R.drawable.twotone_star_24 else R.drawable.twotone_star_border_24
-                            ),
-                            contentDescription = "Star"
-                        )
-                    }
-                    IconButton(onClick = { onDelete(message) }) {
-                        Icon(
-                            painter = painterResource(R.drawable.twotone_delete_24),
-                            contentDescription = "Delete"
-                        )
-                    }
                 }
             )
         },
         bottomBar = {
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .navigationBarsPadding()
+                    .padding(horizontal = 24.dp, vertical = 14.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Button(onClick = { onReply(message) }, modifier = Modifier.weight(1f)) {
-                    Text("Reply")
-                }
-                OutlinedButton(onClick = { onForward(message) }, modifier = Modifier.weight(1f)) {
-                    Text("Forward")
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    tonalElevation = 6.dp,
+                    shadowElevation = 8.dp
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { onReply(message) }) {
+                            Icon(
+                                painter = painterResource(R.drawable.twotone_reply_24),
+                                contentDescription = "Reply"
+                            )
+                        }
+                        IconButton(onClick = { onForward(message) }) {
+                            Icon(
+                                painter = painterResource(R.drawable.twotone_forward_24),
+                                contentDescription = "Forward"
+                            )
+                        }
+                        IconButton(onClick = { onToggleStar(message) }) {
+                            Icon(
+                                painter = painterResource(
+                                    if (message.ui_flagged) R.drawable.twotone_star_24 else R.drawable.twotone_star_border_24
+                                ),
+                                contentDescription = "Star"
+                            )
+                        }
+                        IconButton(onClick = { onDelete(message) }) {
+                            Icon(
+                                painter = painterResource(R.drawable.twotone_delete_24),
+                                contentDescription = "Delete"
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -986,17 +1241,11 @@ private fun MessageDetailScreen(
 
 @Preview(showBackground = true)
 @Composable
-private fun MainTabPreview() {
+private fun FloatingNavPreview() {
     FairEmailTheme {
-        NavigationBar {
-            MainTab.entries.forEach { tab ->
-                NavigationBarItem(
-                    selected = tab == MainTab.Inbox,
-                    onClick = {},
-                    icon = { Icon(painterResource(tab.iconRes), contentDescription = tab.label) },
-                    label = { Text(tab.label) }
-                )
-            }
-        }
+        FloatingExpressiveNavBar(
+            currentTab = MainTab.Inbox,
+            onSelectTab = {}
+        )
     }
 }
