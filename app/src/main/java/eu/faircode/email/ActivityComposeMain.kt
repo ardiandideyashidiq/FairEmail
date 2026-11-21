@@ -12,6 +12,7 @@ import eu.faircode.email.ui.theme.FairEmailTheme
 internal class ActivityComposeMain : ActivityBase() {
     private var openMessageId by mutableLongStateOf(-1L)
     private var resumeDraftId by mutableLongStateOf(-1L)
+    private var openTab by mutableStateOf<String?>(null)
     private var initialError by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,10 +23,12 @@ internal class ActivityComposeMain : ActivityBase() {
                 MainComposeApp(
                     initialOpenMessageId = openMessageId,
                     initialResumeDraftId = resumeDraftId,
+                    initialOpenTab = openTab,
                     initialError = initialError,
                     onConsumeInitialDeepLink = {
                         openMessageId = -1L
                         resumeDraftId = -1L
+                        openTab = null
                         initialError = null
                     },
                     onExitApp = { finish() }
@@ -46,6 +49,8 @@ internal class ActivityComposeMain : ActivityBase() {
         if (msgId > 0L) openMessageId = msgId
         val draftId = intent.getLongExtra("resume_draft_id", -1L)
         if (draftId > 0L) resumeDraftId = draftId
+        val tab = intent.getStringExtra("open_tab")
+        if (!tab.isNullOrBlank()) openTab = tab
         val err = intent.getStringExtra("error")
         if (!err.isNullOrBlank()) initialError = err
     }

@@ -126,6 +126,7 @@ internal fun <T> observeLiveData(liveData: LiveData<T>, initial: T): T {
 fun MainComposeApp(
     initialOpenMessageId: Long = -1L,
     initialResumeDraftId: Long = -1L,
+    initialOpenTab: String? = null,
     initialError: String? = null,
     onConsumeInitialDeepLink: () -> Unit = {},
     onExitApp: () -> Unit = {}
@@ -155,8 +156,11 @@ fun MainComposeApp(
     var composeTarget by remember { mutableStateOf<ComposeTarget?>(null) }
     var addAccountMode by remember { mutableStateOf<AddAccountMode?>(null) }
 
-    LaunchedEffect(initialOpenMessageId, initialResumeDraftId, initialError) {
-        if (initialOpenMessageId > 0L) {
+    LaunchedEffect(initialOpenMessageId, initialResumeDraftId, initialOpenTab, initialError) {
+        if (initialOpenTab == "accounts") {
+            currentTab = MainTab.Accounts
+            onConsumeInitialDeepLink()
+        } else if (initialOpenMessageId > 0L) {
             val loaded = withContext(Dispatchers.IO) {
                 db.message().getMessageEx(initialOpenMessageId)
             }
