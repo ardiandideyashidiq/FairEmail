@@ -10,14 +10,19 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColor
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.updateTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -272,6 +277,11 @@ fun MainComposeApp(
 
     AnimatedContent(
         targetState = Pair(composeTarget, openedMessage),
+        contentKey = { (compose, msg) ->
+            compose?.let { "compose:${it::class.simpleName}" }
+                ?: msg?.id?.let { "msg:$it" }
+                ?: "main"
+        },
         transitionSpec = {
             (fadeIn(ExpressiveMotion.effectsDefault()) + scaleIn(
                 initialScale = 0.96f,
@@ -326,7 +336,17 @@ fun MainComposeApp(
                             )
                         },
                         actions = {
-                            if (currentTab == MainTab.Inbox && selectedFolderId != null) {
+                            AnimatedVisibility(
+                                visible = currentTab == MainTab.Inbox && selectedFolderId != null,
+                                enter = fadeIn(ExpressiveMotion.effectsDefault()) + scaleIn(
+                                    initialScale = 0.9f,
+                                    animationSpec = ExpressiveMotion.spatialFast()
+                                ),
+                                exit = fadeOut(ExpressiveMotion.effectsDefault()) + scaleOut(
+                                    targetScale = 0.9f,
+                                    animationSpec = ExpressiveMotion.spatialFast()
+                                )
+                            ) {
                                 TextButton(onClick = {
                                     selectedFolderId = null
                                     selectedFolderTitle = null
@@ -381,9 +401,14 @@ fun MainComposeApp(
                 AnimatedContent(
                     targetState = currentTab,
                     transitionSpec = {
-                        fadeIn(ExpressiveMotion.effectsDefault()) +
-                            scaleIn(initialScale = 0.98f, animationSpec = ExpressiveMotion.spatialFast()) togetherWith
-                            fadeOut(ExpressiveMotion.effectsDefault())
+                        val forward = MainTab.entries.indexOf(targetState) >= MainTab.entries.indexOf(initialState)
+                        val slideIn = slideInHorizontally(animationSpec = ExpressiveMotion.spatialFast()) { w ->
+                            if (forward) w / 10 else -w / 10
+                        } + fadeIn(ExpressiveMotion.effectsDefault())
+                        val slideOut = slideOutHorizontally(animationSpec = ExpressiveMotion.spatialFast()) { w ->
+                            if (forward) -w / 10 else w / 10
+                        } + fadeOut(ExpressiveMotion.effectsDefault())
+                        slideIn togetherWith slideOut
                     },
                     modifier = Modifier
                         .fillMaxSize()
@@ -713,11 +738,15 @@ private fun FloatingExpressiveDock(
                                         tint = contentColor,
                                         modifier = Modifier.size(21.dp)
                                     )
-                                    if (tab == MainTab.Inbox && unreadCount > 0) {
+                                    androidx.compose.animation.AnimatedVisibility(
+                                        visible = tab == MainTab.Inbox && unreadCount > 0,
+                                        enter = scaleIn(ExpressiveMotion.spatialFast()) + fadeIn(ExpressiveMotion.effectsDefault()),
+                                        exit = scaleOut(ExpressiveMotion.spatialFast()) + fadeOut(ExpressiveMotion.effectsDefault()),
+                                        modifier = Modifier.offset(x = 8.dp, y = (-4).dp)
+                                    ) {
                                         Badge(
                                             containerColor = MaterialTheme.colorScheme.error,
-                                            contentColor = MaterialTheme.colorScheme.onError,
-                                            modifier = Modifier.offset(x = 8.dp, y = (-4).dp)
+                                            contentColor = MaterialTheme.colorScheme.onError
                                         ) {
                                             Text(
                                                 text = if (unreadCount >= 100) "99+" else unreadCount.toString(),
@@ -758,22 +787,19 @@ private fun FloatingExpressiveDock(
                 animationSpec = ExpressiveMotion.spatialFast(),
                 label = "FabScale"
             )
-            val fabContainer by animateColorAsState(
-                targetValue = if (fabMenuExpanded)
-                    MaterialTheme.colorScheme.tertiaryContainer
-                else
-                    MaterialTheme.colorScheme.primary,
-                animationSpec = ExpressiveMotion.effectsDefault(),
+            val fabTransition = updateTransition(targetState = fabMenuExpanded, label = "FabMenuTransition")
+            val fabContainer by fabTransition.animateColor(
+                transitionSpec = { ExpressiveMotion.effectsDefault() },
                 label = "FabContainer"
-            )
-            val fabContent by animateColorAsState(
-                targetValue = if (fabMenuExpanded)
-                    MaterialTheme.colorScheme.onTertiaryContainer
-                else
-                    MaterialTheme.colorScheme.onPrimary,
-                animationSpec = ExpressiveMotion.effectsDefault(),
+            ) { expanded ->
+                if (expanded) MaterialTheme.colorScheme.tertiaryContainer else MaterialTheme.colorScheme.primary
+            }
+            val fabContent by fabTransition.animateColor(
+                transitionSpec = { ExpressiveMotion.effectsDefault() },
                 label = "FabContent"
-            )
+            ) { expanded ->
+                if (expanded) MaterialTheme.colorScheme.onTertiaryContainer else MaterialTheme.colorScheme.onPrimary
+            }
 
             Surface(
                 shape = RoundedCornerShape(fabCorner),
@@ -800,13 +826,24 @@ private fun FloatingExpressiveDock(
                     )
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        painter = painterResource(
-                            if (fabMenuExpanded) R.drawable.twotone_close_24 else R.drawable.twotone_edit_24
-                        ),
-                        contentDescription = stringResource(R.string.title_compose),
-                        modifier = Modifier.size(24.dp)
-                    )
+                    AnimatedContent(
+                        targetState = fabMenuExpanded,
+                        transitionSpec = {
+                            (scaleIn(initialScale = 0.7f, animationSpec = ExpressiveMotion.spatialFast()) +
+                                fadeIn(ExpressiveMotion.effectsDefault())) togetherWith
+                                (scaleOut(targetScale = 0.7f, animationSpec = ExpressiveMotion.spatialFast()) +
+                                    fadeOut(ExpressiveMotion.effectsDefault()))
+                        },
+                        label = "FabIconMorph"
+                    ) { expanded ->
+                        Icon(
+                            painter = painterResource(
+                                if (expanded) R.drawable.twotone_close_24 else R.drawable.twotone_edit_24
+                            ),
+                            contentDescription = stringResource(R.string.title_compose),
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
                 }
             }
         }
@@ -936,27 +973,40 @@ private fun InboxScreen(
             )
         }
 
-        if (messages.isEmpty()) {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    text = stringResource(R.string.title_no_messages),
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(messages, key = { it.id ?: 0L }) { msg ->
-                    val onItemClick = remember(msg.id) { { onMessageClick(msg) } }
-                    val onItemStar = remember(msg.id, msg.ui_flagged) { { onToggleStar(msg) } }
-                    MessageRowItem(
-                        message = msg,
-                        onClick = onItemClick,
-                        onToggleStar = onItemStar
+        AnimatedContent(
+            targetState = messages.isEmpty(),
+            transitionSpec = {
+                fadeIn(ExpressiveMotion.effectsDefault()) togetherWith fadeOut(ExpressiveMotion.effectsDefault())
+            },
+            label = "InboxEmptyTransition"
+        ) { empty ->
+            if (empty) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        text = stringResource(R.string.title_no_messages),
+                        style = MaterialTheme.typography.bodyMedium
                     )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(messages, key = { it.id ?: 0L }) { msg ->
+                        val onItemClick = remember(msg.id) { { onMessageClick(msg) } }
+                        val onItemStar = remember(msg.id, msg.ui_flagged) { { onToggleStar(msg) } }
+                        MessageRowItem(
+                            message = msg,
+                            onClick = onItemClick,
+                            onToggleStar = onItemStar,
+                            modifier = Modifier.animateItem(
+                                fadeInSpec = ExpressiveMotion.effectsDefault(),
+                                placementSpec = ExpressiveMotion.spatialFast(),
+                                fadeOutSpec = ExpressiveMotion.effectsDefault()
+                            )
+                        )
+                    }
                 }
             }
         }
@@ -967,7 +1017,8 @@ private fun InboxScreen(
 private fun MessageRowItem(
     message: TupleMessageEx,
     onClick: () -> Unit,
-    onToggleStar: () -> Unit
+    onToggleStar: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val sender = remember(message.from) {
@@ -998,7 +1049,9 @@ private fun MessageRowItem(
         onClick = onClick,
         shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = cardContainer),
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier
+            .fillMaxWidth()
+            .animateContentSize(ExpressiveMotion.spatialFast())
     ) {
         Row(
             modifier = Modifier
@@ -1096,7 +1149,13 @@ private fun FoldersScreen(
                     onClick = { onFolderClick(folder) },
                     shape = RoundedCornerShape(18.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateItem(
+                            fadeInSpec = ExpressiveMotion.effectsDefault(),
+                            placementSpec = ExpressiveMotion.spatialFast(),
+                            fadeOutSpec = ExpressiveMotion.effectsDefault()
+                        )
                 ) {
                     Row(
                         modifier = Modifier
@@ -1185,10 +1244,17 @@ private fun SearchScreen(
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             items(messages, key = { it.id ?: 0L }) { msg ->
+                val onItemClick = remember(msg.id) { { onMessageClick(msg) } }
+                val onItemStar = remember(msg.id, msg.ui_flagged) { { onToggleStar(msg) } }
                 MessageRowItem(
                     message = msg,
-                    onClick = { onMessageClick(msg) },
-                    onToggleStar = { onToggleStar(msg) }
+                    onClick = onItemClick,
+                    onToggleStar = onItemStar,
+                    modifier = Modifier.animateItem(
+                        fadeInSpec = ExpressiveMotion.effectsDefault(),
+                        placementSpec = ExpressiveMotion.spatialFast(),
+                        fadeOutSpec = ExpressiveMotion.effectsDefault()
+                    )
                 )
             }
         }
