@@ -42,25 +42,23 @@ public class FragmentDialogEditSubject extends FragmentDialogBase {
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
         final Context context = getContext();
-        View view = LayoutInflater.from(context).inflate(R.layout.dialog_edit_subject, null);
-        final EditText etSubject = view.findViewById(R.id.etSubject);
+        final eu.faircode.email.ui.SingleInputDialogComposeView view =
+                eu.faircode.email.ui.ComposeContentHelper.createEditSubjectDialogView(context);
 
         Bundle args = getArguments();
-        etSubject.setText(args.getString("subject"));
+        view.setText(args.getString("subject"));
+        view.requestInputFocus();
 
-        etSubject.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+        view.setOnDoneListener(new Runnable() {
             @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId != EditorInfo.IME_ACTION_DONE)
-                    return false;
+            public void run() {
                 AlertDialog dialog = (AlertDialog) getDialog();
                 if (dialog == null)
-                    return false;
+                    return;
                 Button btnOk = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
                 if (btnOk == null)
-                    return false;
+                    return;
                 btnOk.performClick();
-                return true;
             }
         });
 
@@ -69,7 +67,7 @@ public class FragmentDialogEditSubject extends FragmentDialogBase {
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        args.putString("subject", etSubject.getText().toString());
+                        args.putString("subject", view.getText());
                         sendResult(RESULT_OK);
                     }
                 })

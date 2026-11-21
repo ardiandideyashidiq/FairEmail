@@ -3533,10 +3533,10 @@ public class Helper {
 
                 } else {
                     Log.i("Authenticate PIN");
-                    final View dview = LayoutInflater.from(activity).inflate(R.layout.dialog_pin_ask, null);
-                    final EditText etPin = dview.findViewById(R.id.etPin);
+                    final eu.faircode.email.ui.SingleInputDialogComposeView dview =
+                            eu.faircode.email.ui.ComposeContentHelper.createPinAskDialogView(activity);
 
-                    etPin.setEnabled(false);
+                    dview.setEnabled(false);
 
                     final AlertDialog dialog = new AlertDialog.Builder(activity)
                             .setView(dview)
@@ -3545,7 +3545,7 @@ public class Helper {
                                 public void onClick(DialogInterface dialog, int which) {
                                     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(activity);
                                     String pin = prefs.getString("pin", "");
-                                    String entered = etPin.getText().toString();
+                                    String entered = dview.getText();
 
                                     Log.i("Authenticate PIN ok=" + pin.equals(entered));
                                     if (pin.equals(entered)) {
@@ -3584,14 +3584,10 @@ public class Helper {
                             })
                             .create();
 
-                    etPin.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+                    dview.setOnDoneListener(new Runnable() {
                         @Override
-                        public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                            if (actionId == EditorInfo.IME_ACTION_DONE) {
-                                dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick();
-                                return true;
-                            } else
-                                return false;
+                        public void run() {
+                            dialog.getButton(DialogInterface.BUTTON_POSITIVE).performClick();
                         }
                     });
 
@@ -3605,17 +3601,16 @@ public class Helper {
                         if (wait > PIN_FAILURE_DELAY_MAX)
                             wait = PIN_FAILURE_DELAY_MAX;
                         long delay = pin_failure_at + wait - new Date().getTime();
-                        etPin.setHint(getDateTimeInstance(activity).format(pin_failure_at + wait));
+                        dview.setHint(getDateTimeInstance(activity).format(pin_failure_at + wait));
                         Log.i("PIN wait=" + wait + " delay=" + delay);
                         dview.postDelayed(new Runnable() {
                             @Override
                             public void run() {
                                 try {
-                                    etPin.setCompoundDrawables(null, null, null, null);
-                                    etPin.setHint(R.string.title_advanced_pin);
-                                    etPin.setEnabled(true);
-                                    etPin.requestFocus();
-                                    showKeyboard(etPin);
+                                    dview.setLeadingIconRes(0);
+                                    dview.setHint(R.string.title_advanced_pin);
+                                    dview.setEnabled(true);
+                                    dview.requestInputFocus();
                                     dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
                                 } catch (Throwable ex) {
                                     Log.e(ex);

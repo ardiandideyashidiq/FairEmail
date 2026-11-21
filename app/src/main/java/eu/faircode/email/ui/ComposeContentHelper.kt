@@ -110,4 +110,67 @@ object ComposeContentHelper {
             )
         }
     }
+
+    @JvmStatic
+    fun createPinSetDialogView(context: Context): SingleInputDialogComposeView {
+        return SingleInputDialogComposeView(
+            context = context,
+            titleIconRes = eu.faircode.email.R.drawable.twotone_pin_24,
+            titleRes = eu.faircode.email.R.string.title_advanced_pin,
+            keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+        ).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
+
+    @JvmStatic
+    fun createPinAskDialogView(context: Context): SingleInputDialogComposeView {
+        return SingleInputDialogComposeView(
+            context = context,
+            titleIconRes = eu.faircode.email.R.drawable.twotone_pin_24,
+            titleRes = eu.faircode.email.R.string.app_name,
+            keyboardType = androidx.compose.ui.text.input.KeyboardType.NumberPassword,
+            isPassword = true
+        ).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+            setLeadingIconRes(eu.faircode.email.R.drawable.twotone_hourglass_top_24)
+        }
+    }
+
+    @JvmStatic
+    fun createKeywordAddDialogView(context: Context): SingleInputDialogComposeView {
+        return SingleInputDialogComposeView(
+            context = context,
+            titleIconRes = eu.faircode.email.R.drawable.twotone_label_important_24,
+            titleRes = eu.faircode.email.R.string.title_add_keyword
+        ).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
+
+    @JvmStatic
+    fun createEditSubjectDialogView(context: Context): SingleInputDialogComposeView {
+        return SingleInputDialogComposeView(
+            context = context,
+            titleIconRes = eu.faircode.email.R.drawable.twotone_edit_24,
+            titleRes = eu.faircode.email.R.string.title_edit_subject,
+            keyboardType = androidx.compose.ui.text.input.KeyboardType.Email,
+            capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences,
+            autoCorrectEnabled = true
+        ).apply {
+            layoutParams = ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+    }
 }

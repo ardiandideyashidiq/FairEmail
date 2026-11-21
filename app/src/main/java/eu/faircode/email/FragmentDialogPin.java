@@ -43,8 +43,8 @@ public class FragmentDialogPin extends FragmentDialogBase {
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        final View dview = LayoutInflater.from(getContext()).inflate(R.layout.dialog_pin_set, null);
-        final EditText etPin = dview.findViewById(R.id.etPin);
+        final eu.faircode.email.ui.SingleInputDialogComposeView dview =
+                eu.faircode.email.ui.ComposeContentHelper.createPinSetDialogView(getContext());
 
         final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(getContext());
 
@@ -53,7 +53,7 @@ public class FragmentDialogPin extends FragmentDialogBase {
                 .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        String pin = etPin.getText().toString();
+                        String pin = dview.getText();
                         if (TextUtils.isEmpty(pin))
                             prefs.edit().remove("pin").apply();
                         else {
@@ -82,22 +82,10 @@ public class FragmentDialogPin extends FragmentDialogBase {
 
         final Dialog dialog = builder.create();
 
-        etPin.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+        dview.setOnDoneListener(new Runnable() {
             @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                if (actionId == EditorInfo.IME_ACTION_DONE) {
-                    ((AlertDialog) getDialog()).getButton(DialogInterface.BUTTON_POSITIVE).performClick();
-                    return true;
-                } else
-                    return false;
-            }
-        });
-
-        etPin.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                if (hasFocus)
-                    dialog.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+            public void run() {
+                ((AlertDialog) getDialog()).getButton(DialogInterface.BUTTON_POSITIVE).performClick();
             }
         });
 
@@ -106,7 +94,7 @@ public class FragmentDialogPin extends FragmentDialogBase {
             public void run() {
                 if (!getLifecycle().getCurrentState().isAtLeast(Lifecycle.State.STARTED))
                     return;
-                etPin.requestFocus();
+                dview.requestInputFocus();
             }
         });
 
