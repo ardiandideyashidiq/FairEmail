@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import android.net.Uri
 import android.text.format.DateUtils
 import android.webkit.WebView
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -155,6 +156,24 @@ fun MainComposeApp(
     var openedMessage by remember { mutableStateOf<TupleMessageEx?>(null) }
     var composeTarget by remember { mutableStateOf<ComposeTarget?>(null) }
     var addAccountMode by remember { mutableStateOf<AddAccountMode?>(null) }
+
+    val canNavigateBack = composeTarget != null ||
+        openedMessage != null ||
+        (currentTab == MainTab.Inbox && selectedFolderId != null) ||
+        currentTab != MainTab.Inbox
+
+    BackHandler(enabled = canNavigateBack) {
+        when {
+            composeTarget != null -> composeTarget = null
+            openedMessage != null -> openedMessage = null
+            currentTab == MainTab.Inbox && selectedFolderId != null -> {
+                selectedFolderId = null
+                selectedFolderTitle = null
+                currentTab = MainTab.Folders
+            }
+            currentTab != MainTab.Inbox -> currentTab = MainTab.Inbox
+        }
+    }
 
     LaunchedEffect(initialOpenMessageId, initialResumeDraftId, initialOpenTab, initialError) {
         if (initialOpenTab == "accounts") {
