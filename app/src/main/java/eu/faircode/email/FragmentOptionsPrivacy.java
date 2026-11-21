@@ -739,12 +739,12 @@ public class FragmentOptionsPrivacy extends FragmentBase implements SharedPrefer
 
         private List<String> items;
 
-        public class ViewHolder extends RecyclerView.ViewHolder implements CompoundButton.OnCheckedChangeListener {
-            private CheckBox cbEnabled;
+        public class ViewHolder extends RecyclerView.ViewHolder implements eu.faircode.email.ui.CheckboxRowComposeView.OnCheckedChangeListener {
+            private eu.faircode.email.ui.CheckboxRowComposeView cbEnabled;
 
-            ViewHolder(View itemView) {
+            ViewHolder(eu.faircode.email.ui.CheckboxRowComposeView itemView) {
                 super(itemView);
-                cbEnabled = itemView.findViewById(R.id.cbEnabled);
+                cbEnabled = itemView;
             }
 
             private void wire() {
@@ -761,7 +761,7 @@ public class FragmentOptionsPrivacy extends FragmentBase implements SharedPrefer
             }
 
             @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+            public void onCheckedChanged(boolean isChecked) {
                 int pos = getAdapterPosition();
                 if (pos == RecyclerView.NO_POSITION)
                     return;
@@ -787,7 +787,7 @@ public class FragmentOptionsPrivacy extends FragmentBase implements SharedPrefer
         @Override
         @NonNull
         public AdapterDisconnect.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            return new AdapterDisconnect.ViewHolder(inflater.inflate(R.layout.item_disconnect_enabled, parent, false));
+            return new AdapterDisconnect.ViewHolder(eu.faircode.email.ui.ComposeContentHelper.createCheckboxRowView(parent.getContext(), 0));
         }
 
         @Override

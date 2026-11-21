@@ -9353,7 +9353,7 @@ public class AdapterMessage extends RecyclerView.Adapter<AdapterMessage.ViewHold
         TupleMessageEx message = differ.getItem(position);
 
         if (message == null || context == null)
-            return R.layout.item_message_placeholder;
+            return -1;
 
         if (filter_duplicates && message.duplicate)
             return R.layout.item_message_duplicate;
@@ -9370,6 +9370,10 @@ public class AdapterMessage extends RecyclerView.Adapter<AdapterMessage.ViewHold
     @Override
     @NonNull
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        if (viewType == -1)
+            return new ViewHolder(
+                    eu.faircode.email.ui.ComposeContentHelper.createMessagePlaceholderView(parent.getContext()),
+                    viewType);
         View view = inflater.inflate(viewType, parent, false);
         if (align_header &&
                 (viewType == R.layout.item_message_compact ||

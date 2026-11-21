@@ -67,33 +67,25 @@ public class ActivityMain extends ActivityBase implements FragmentManager.OnBack
         if (cake < Helper.MIN_REQUIRED_SPACE && accept_space < now) {
             setTheme(R.style.AppThemeBlueOrangeLight);
             super.onCreate(savedInstanceState);
-            setContentView(R.layout.activity_space);
-
-            TextView tvRemaining = findViewById(R.id.tvRemaining);
-            tvRemaining.setText(getString(R.string.app_cake_remaining,
-                    Helper.humanReadableByteCount(cake)));
-
-            TextView tvRequired = findViewById(R.id.tvRequired);
-            tvRequired.setText(getString(R.string.app_cake_required,
-                    Helper.humanReadableByteCount(Helper.MIN_REQUIRED_SPACE, true)));
-
-            Button btnFix = findViewById(R.id.btnFix);
-            btnFix.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    Intent intent = new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS);
-                    v.getContext().startActivity(intent);
-                }
-            });
-
-            Button btnContinue = findViewById(R.id.btnContinue);
-            btnContinue.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    prefs.edit().putLong("accept_space", now + IGNORE_STORAGE_SPACE).commit();
-                    ApplicationEx.restart(v.getContext(), "accept_space");
-                }
-            });
+            eu.faircode.email.ui.ComposeContentHelper.setSpaceContent(
+                    this,
+                    getString(R.string.app_cake_remaining, Helper.humanReadableByteCount(cake)),
+                    getString(R.string.app_cake_required, Helper.humanReadableByteCount(Helper.MIN_REQUIRED_SPACE, true)),
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            Intent intent = new Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS);
+                            startActivity(intent);
+                        }
+                    },
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            prefs.edit().putLong("accept_space", now + IGNORE_STORAGE_SPACE).commit();
+                            ApplicationEx.restart(ActivityMain.this, "accept_space");
+                        }
+                    }
+            );
 
             return;
         }
@@ -103,14 +95,11 @@ public class ActivityMain extends ActivityBase implements FragmentManager.OnBack
                 Helper.isPlayStoreInstall()) {
             setTheme(R.style.AppThemeBlueOrangeLight);
             super.onCreate(savedInstanceState);
-            setContentView(R.layout.activity_unsupported);
-
-            Button btnContinue = findViewById(R.id.btnContinue);
-            btnContinue.setOnClickListener(new View.OnClickListener() {
+            eu.faircode.email.ui.ComposeContentHelper.setUnsupportedContent(this, new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     prefs.edit().putBoolean("accept_unsupported", true).commit();
-                    ApplicationEx.restart(v.getContext(), "accept_unsupported");
+                    ApplicationEx.restart(ActivityMain.this, "accept_unsupported");
                 }
             });
 
