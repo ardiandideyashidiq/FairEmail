@@ -85,6 +85,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -95,6 +96,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.LiveData
@@ -641,7 +643,7 @@ private fun FloatingExpressiveDock(
                     val tabs = MainTab.entries
                     val tabWidth = maxWidth / tabs.size
                     val selectedIndex = tabs.indexOf(currentTab).coerceAtLeast(0)
-                    val indicatorOffset by animateDpAsState(
+                    val indicatorOffsetState = animateDpAsState(
                         targetValue = tabWidth * selectedIndex,
                         animationSpec = ExpressiveMotion.spatialFast(),
                         label = "SlidingIndicatorOffset"
@@ -649,7 +651,7 @@ private fun FloatingExpressiveDock(
 
                     Box(
                         modifier = Modifier
-                            .offset(x = indicatorOffset)
+                            .offset { IntOffset(indicatorOffsetState.value.roundToPx(), 0) }
                             .width(tabWidth)
                             .fillMaxHeight()
                             .clip(CircleShape)
@@ -672,7 +674,7 @@ private fun FloatingExpressiveDock(
                                 animationSpec = ExpressiveMotion.effectsDefault(),
                                 label = "NavTextColor"
                             )
-                            val scale by animateFloatAsState(
+                            val scaleState = animateFloatAsState(
                                 targetValue = when {
                                     pressed -> 0.92f
                                     selected -> 1.03f
@@ -685,7 +687,11 @@ private fun FloatingExpressiveDock(
                             Column(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .scale(scale)
+                                    .graphicsLayer {
+                                        val s = scaleState.value
+                                        scaleX = s
+                                        scaleY = s
+                                    }
                                     .clip(CircleShape)
                                     .clickable(
                                         interactionSource = interactionSource,
@@ -747,7 +753,7 @@ private fun FloatingExpressiveDock(
                 animationSpec = ExpressiveMotion.spatialFast(),
                 label = "FabCornerMorph"
             )
-            val fabScale by animateFloatAsState(
+            val fabScaleState = animateFloatAsState(
                 targetValue = if (fabPressed) 0.92f else 1f,
                 animationSpec = ExpressiveMotion.spatialFast(),
                 label = "FabScale"
@@ -777,7 +783,11 @@ private fun FloatingExpressiveDock(
                 shadowElevation = 8.dp,
                 modifier = Modifier
                     .size(56.dp)
-                    .scale(fabScale)
+                    .graphicsLayer {
+                        val s = fabScaleState.value
+                        scaleX = s
+                        scaleY = s
+                    }
                     .clip(RoundedCornerShape(fabCorner))
                     .combinedClickable(
                         interactionSource = fabInteraction,
@@ -940,10 +950,12 @@ private fun InboxScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 items(messages, key = { it.id ?: 0L }) { msg ->
+                    val onItemClick = remember(msg.id) { { onMessageClick(msg) } }
+                    val onItemStar = remember(msg.id, msg.ui_flagged) { { onToggleStar(msg) } }
                     MessageRowItem(
                         message = msg,
-                        onClick = { onMessageClick(msg) },
-                        onToggleStar = { onToggleStar(msg) }
+                        onClick = onItemClick,
+                        onToggleStar = onItemStar
                     )
                 }
             }
@@ -965,11 +977,9 @@ private fun MessageRowItem(
         DateUtils.getRelativeTimeSpanString(context, message.received).toString()
     }
     val fontWeight = if (message.ui_seen) FontWeight.Normal else FontWeight.Bold
-    val cardShape by animateDpAsState(
-        targetValue = if (message.ui_seen) 14.dp else 22.dp,
-        animationSpec = ExpressiveMotion.spatialFast(),
-        label = "MsgShape"
-    )
+    val cardShape = remember(message.ui_seen) {
+        RoundedCornerShape(if (message.ui_seen) 14.dp else 22.dp)
+    }
     val cardContainer by animateColorAsState(
         targetValue = if (message.ui_seen)
             MaterialTheme.colorScheme.surfaceContainerLow
@@ -978,7 +988,7 @@ private fun MessageRowItem(
         animationSpec = ExpressiveMotion.effectsDefault(),
         label = "MsgContainer"
     )
-    val starScale by animateFloatAsState(
+    val starScaleState = animateFloatAsState(
         targetValue = if (message.ui_flagged) 1.15f else 1f,
         animationSpec = ExpressiveMotion.spatialFast(),
         label = "StarScale"
@@ -986,7 +996,7 @@ private fun MessageRowItem(
 
     Card(
         onClick = onClick,
-        shape = RoundedCornerShape(cardShape),
+        shape = cardShape,
         colors = CardDefaults.cardColors(containerColor = cardContainer),
         modifier = Modifier.fillMaxWidth()
     ) {
@@ -1042,7 +1052,11 @@ private fun MessageRowItem(
             }
             IconButton(
                 onClick = onToggleStar,
-                modifier = Modifier.scale(starScale)
+                modifier = Modifier.graphicsLayer {
+                    val s = starScaleState.value
+                    scaleX = s
+                    scaleY = s
+                }
             ) {
                 Icon(
                     painter = painterResource(
