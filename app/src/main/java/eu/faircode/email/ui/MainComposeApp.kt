@@ -9,6 +9,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -16,22 +17,31 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -75,7 +85,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -156,14 +169,22 @@ fun MainComposeApp(
     var openedMessage by remember { mutableStateOf<TupleMessageEx?>(null) }
     var composeTarget by remember { mutableStateOf<ComposeTarget?>(null) }
     var addAccountMode by remember { mutableStateOf<AddAccountMode?>(null) }
+    var fabMenuExpanded by remember { mutableStateOf(false) }
 
-    val canNavigateBack = composeTarget != null ||
+    val unseenMessages = observeLiveData(
+        liveData = remember(db) { db.message().liveComposeMessages(null, true, false, false, null, 100) },
+        initial = emptyList()
+    )
+
+    val canNavigateBack = fabMenuExpanded ||
+        composeTarget != null ||
         openedMessage != null ||
         (currentTab == MainTab.Inbox && selectedFolderId != null) ||
         currentTab != MainTab.Inbox
 
     BackHandler(enabled = canNavigateBack) {
         when {
+            fabMenuExpanded -> fabMenuExpanded = false
             composeTarget != null -> composeTarget = null
             openedMessage != null -> openedMessage = null
             currentTab == MainTab.Inbox && selectedFolderId != null -> {
@@ -322,17 +343,36 @@ fun MainComposeApp(
                         }
                     )
                 },
-                floatingActionButton = {
-                    if (currentTab == MainTab.Inbox || currentTab == MainTab.Folders) {
-                        ExpressiveComposeFab(
-                            onClick = { composeTarget = ComposeTarget.New }
-                        )
-                    }
-                },
                 bottomBar = {
-                    FloatingExpressiveNavBar(
+                    FloatingExpressiveDock(
                         currentTab = currentTab,
-                        onSelectTab = { currentTab = it }
+                        unreadCount = unseenMessages.size,
+                        fabMenuExpanded = fabMenuExpanded,
+                        onSelectTab = {
+                            fabMenuExpanded = false
+                            currentTab = it
+                        },
+                        onFabClick = {
+                            if (fabMenuExpanded) {
+                                fabMenuExpanded = false
+                            } else {
+                                composeTarget = ComposeTarget.New
+                            }
+                        },
+                        onFabLongClick = { fabMenuExpanded = !fabMenuExpanded },
+                        onNewEmail = {
+                            fabMenuExpanded = false
+                            composeTarget = ComposeTarget.New
+                        },
+                        onSyncNow = {
+                            fabMenuExpanded = false
+                            ServiceUI.sync(context, null)
+                            scope.launch { snackbarHostState.showSnackbar("Syncing Gmail...") }
+                        },
+                        onAddGmail = {
+                            fabMenuExpanded = false
+                            addAccountMode = AddAccountMode.OAuth
+                        }
                     )
                 }
             ) { innerPadding ->
@@ -494,78 +534,269 @@ fun MainComposeApp(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun FloatingExpressiveNavBar(
+private fun FloatingExpressiveDock(
     currentTab: MainTab,
-    onSelectTab: (MainTab) -> Unit
+    unreadCount: Int,
+    fabMenuExpanded: Boolean,
+    onSelectTab: (MainTab) -> Unit,
+    onFabClick: () -> Unit,
+    onFabLongClick: () -> Unit,
+    onNewEmail: () -> Unit,
+    onSyncNow: () -> Unit,
+    onAddGmail: () -> Unit
 ) {
-    Box(
+    val haptic = LocalHapticFeedback.current
+    var dragAccumulator by remember { mutableStateOf(0f) }
+
+    Column(
         modifier = Modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        contentAlignment = Alignment.Center
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
-            tonalElevation = 6.dp,
-            shadowElevation = 8.dp,
-            modifier = Modifier.fillMaxWidth()
+        AnimatedVisibility(
+            visible = fabMenuExpanded,
+            enter = fadeIn(ExpressiveMotion.effectsDefault()) +
+                slideInVertically(
+                    initialOffsetY = { it / 2 },
+                    animationSpec = ExpressiveMotion.spatialFast()
+                ) +
+                scaleIn(initialScale = 0.9f, animationSpec = ExpressiveMotion.spatialFast()),
+            exit = fadeOut(ExpressiveMotion.effectsDefault()) +
+                slideOutVertically(
+                    targetOffsetY = { it / 2 },
+                    animationSpec = ExpressiveMotion.spatialFast()
+                ) +
+                scaleOut(targetScale = 0.9f, animationSpec = ExpressiveMotion.spatialFast())
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                MainTab.entries.forEach { tab ->
-                    val selected = currentTab == tab
-                    val containerColor by animateColorAsState(
-                        targetValue = if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent,
-                        animationSpec = ExpressiveMotion.effectsDefault(),
-                        label = "NavPillColor"
-                    )
-                    val contentColor by animateColorAsState(
-                        targetValue = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-                        animationSpec = ExpressiveMotion.effectsDefault(),
-                        label = "NavTextColor"
-                    )
-                    val scale by animateFloatAsState(
-                        targetValue = if (selected) 1.04f else 1f,
-                        animationSpec = ExpressiveMotion.spatialFast(),
-                        label = "NavScale"
-                    )
+                ExpressiveFabMenuItem(
+                    iconRes = R.drawable.twotone_account_circle_24,
+                    label = "Add Gmail",
+                    onClick = onAddGmail
+                )
+                ExpressiveFabMenuItem(
+                    iconRes = R.drawable.twotone_sync_24,
+                    label = "Sync Now",
+                    onClick = onSyncNow
+                )
+                ExpressiveFabMenuItem(
+                    iconRes = R.drawable.twotone_edit_24,
+                    label = stringResource(R.string.title_compose),
+                    onClick = onNewEmail
+                )
+            }
+        }
 
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .scale(scale)
-                            .clip(CircleShape)
-                            .background(containerColor)
-                            .clickable { onSelectTab(tab) }
-                            .padding(vertical = 8.dp, horizontal = 4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            painter = painterResource(tab.iconRes),
-                            contentDescription = tab.label,
-                            tint = contentColor,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = tab.label,
-                            color = contentColor,
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
-                            ),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                tonalElevation = 6.dp,
+                shadowElevation = 8.dp,
+                modifier = Modifier
+                    .weight(1f)
+                    .pointerInput(currentTab) {
+                        detectHorizontalDragGestures(
+                            onDragStart = { dragAccumulator = 0f },
+                            onHorizontalDrag = { _, dragAmount ->
+                                dragAccumulator += dragAmount
+                                val threshold = 72f
+                                if (dragAccumulator > threshold) {
+                                    val idx = MainTab.entries.indexOf(currentTab)
+                                    if (idx < MainTab.entries.lastIndex) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        onSelectTab(MainTab.entries[idx + 1])
+                                    }
+                                    dragAccumulator = 0f
+                                } else if (dragAccumulator < -threshold) {
+                                    val idx = MainTab.entries.indexOf(currentTab)
+                                    if (idx > 0) {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        onSelectTab(MainTab.entries[idx - 1])
+                                    }
+                                    dragAccumulator = 0f
+                                }
+                            }
                         )
                     }
+            ) {
+                BoxWithConstraints(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(6.dp)
+                        .height(IntrinsicSize.Min)
+                ) {
+                    val tabs = MainTab.entries
+                    val tabWidth = maxWidth / tabs.size
+                    val selectedIndex = tabs.indexOf(currentTab).coerceAtLeast(0)
+                    val indicatorOffset by animateDpAsState(
+                        targetValue = tabWidth * selectedIndex,
+                        animationSpec = ExpressiveMotion.spatialFast(),
+                        label = "SlidingIndicatorOffset"
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .offset(x = indicatorOffset)
+                            .width(tabWidth)
+                            .fillMaxHeight()
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer)
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        tabs.forEach { tab ->
+                            val selected = currentTab == tab
+                            val interactionSource = remember { MutableInteractionSource() }
+                            val pressed by interactionSource.collectIsPressedAsState()
+                            val contentColor by animateColorAsState(
+                                targetValue = if (selected)
+                                    MaterialTheme.colorScheme.onPrimaryContainer
+                                else
+                                    MaterialTheme.colorScheme.onSurfaceVariant,
+                                animationSpec = ExpressiveMotion.effectsDefault(),
+                                label = "NavTextColor"
+                            )
+                            val scale by animateFloatAsState(
+                                targetValue = when {
+                                    pressed -> 0.92f
+                                    selected -> 1.03f
+                                    else -> 1f
+                                },
+                                animationSpec = ExpressiveMotion.spatialFast(),
+                                label = "NavScale"
+                            )
+
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .scale(scale)
+                                    .clip(CircleShape)
+                                    .clickable(
+                                        interactionSource = interactionSource,
+                                        indication = null
+                                    ) {
+                                        if (!selected) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        }
+                                        onSelectTab(tab)
+                                    }
+                                    .padding(vertical = 8.dp, horizontal = 2.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Box(contentAlignment = Alignment.TopEnd) {
+                                    Icon(
+                                        painter = painterResource(tab.iconRes),
+                                        contentDescription = tab.label,
+                                        tint = contentColor,
+                                        modifier = Modifier.size(21.dp)
+                                    )
+                                    if (tab == MainTab.Inbox && unreadCount > 0) {
+                                        Badge(
+                                            containerColor = MaterialTheme.colorScheme.error,
+                                            contentColor = MaterialTheme.colorScheme.onError,
+                                            modifier = Modifier.offset(x = 8.dp, y = (-4).dp)
+                                        ) {
+                                            Text(
+                                                text = if (unreadCount >= 100) "99+" else unreadCount.toString(),
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
+                                        }
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = tab.label,
+                                    color = contentColor,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                                    ),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            val fabInteraction = remember { MutableInteractionSource() }
+            val fabPressed by fabInteraction.collectIsPressedAsState()
+            val fabCorner by animateDpAsState(
+                targetValue = when {
+                    fabMenuExpanded -> 28.dp
+                    fabPressed -> 14.dp
+                    else -> 20.dp
+                },
+                animationSpec = ExpressiveMotion.spatialFast(),
+                label = "FabCornerMorph"
+            )
+            val fabScale by animateFloatAsState(
+                targetValue = if (fabPressed) 0.92f else 1f,
+                animationSpec = ExpressiveMotion.spatialFast(),
+                label = "FabScale"
+            )
+            val fabContainer by animateColorAsState(
+                targetValue = if (fabMenuExpanded)
+                    MaterialTheme.colorScheme.tertiaryContainer
+                else
+                    MaterialTheme.colorScheme.primary,
+                animationSpec = ExpressiveMotion.effectsDefault(),
+                label = "FabContainer"
+            )
+            val fabContent by animateColorAsState(
+                targetValue = if (fabMenuExpanded)
+                    MaterialTheme.colorScheme.onTertiaryContainer
+                else
+                    MaterialTheme.colorScheme.onPrimary,
+                animationSpec = ExpressiveMotion.effectsDefault(),
+                label = "FabContent"
+            )
+
+            Surface(
+                shape = RoundedCornerShape(fabCorner),
+                color = fabContainer,
+                contentColor = fabContent,
+                tonalElevation = 6.dp,
+                shadowElevation = 8.dp,
+                modifier = Modifier
+                    .size(56.dp)
+                    .scale(fabScale)
+                    .clip(RoundedCornerShape(fabCorner))
+                    .combinedClickable(
+                        interactionSource = fabInteraction,
+                        indication = null,
+                        onClick = onFabClick,
+                        onLongClick = {
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            onFabLongClick()
+                        }
+                    )
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        painter = painterResource(
+                            if (fabMenuExpanded) R.drawable.twotone_close_24 else R.drawable.twotone_edit_24
+                        ),
+                        contentDescription = stringResource(R.string.title_compose),
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
         }
@@ -573,32 +804,34 @@ private fun FloatingExpressiveNavBar(
 }
 
 @Composable
-private fun ExpressiveComposeFab(onClick: () -> Unit) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val cornerRadius by animateDpAsState(
-        targetValue = if (pressed) 14.dp else 22.dp,
-        animationSpec = ExpressiveMotion.spatialFast(),
-        label = "FabCornerMorph"
-    )
-    val scale by animateFloatAsState(
-        targetValue = if (pressed) 0.94f else 1f,
-        animationSpec = ExpressiveMotion.spatialFast(),
-        label = "FabScale"
-    )
-
-    FloatingActionButton(
+private fun ExpressiveFabMenuItem(
+    iconRes: Int,
+    label: String,
+    onClick: () -> Unit
+) {
+    Surface(
         onClick = onClick,
-        interactionSource = interactionSource,
-        shape = RoundedCornerShape(cornerRadius),
-        containerColor = MaterialTheme.colorScheme.primaryContainer,
-        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-        modifier = Modifier.scale(scale)
+        shape = CircleShape,
+        color = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        tonalElevation = 4.dp,
+        shadowElevation = 6.dp
     ) {
-        Icon(
-            painter = painterResource(R.drawable.twotone_edit_24),
-            contentDescription = stringResource(R.string.title_compose)
-        )
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                painter = painterResource(iconRes),
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold)
+            )
+        }
     }
 }
 
@@ -1304,9 +1537,16 @@ private fun MessageDetailScreen(
 @Composable
 private fun FloatingNavPreview() {
     FairEmailTheme {
-        FloatingExpressiveNavBar(
+        FloatingExpressiveDock(
             currentTab = MainTab.Inbox,
-            onSelectTab = {}
+            unreadCount = 3,
+            fabMenuExpanded = false,
+            onSelectTab = {},
+            onFabClick = {},
+            onFabLongClick = {},
+            onNewEmail = {},
+            onSyncNow = {},
+            onAddGmail = {}
         )
     }
 }
